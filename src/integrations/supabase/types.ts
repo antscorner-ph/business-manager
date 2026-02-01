@@ -14,6 +14,109 @@ export type Database = {
   }
   public: {
     Tables: {
+      customers: {
+        Row: {
+          id: string
+          name: string
+          email: string | null
+          phone: string | null
+          address: string | null
+          city: string | null
+          postal_code: string | null
+          contact_person: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email?: string | null
+          phone?: string | null
+          address?: string | null
+          city?: string | null
+          postal_code?: string | null
+          contact_person?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string | null
+          phone?: string | null
+          address?: string | null
+          city?: string | null
+          postal_code?: string | null
+          contact_person?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receivables_customer_id_fkey"
+            columns: ["id"]
+            isOneToOne: false
+            referencedRelation: "receivables"
+            referencedColumns: ["customer_id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          id: string
+          name: string
+          email: string | null
+          phone: string | null
+          address: string | null
+          city: string | null
+          postal_code: string | null
+          contact_person: string | null
+          payment_terms: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email?: string | null
+          phone?: string | null
+          address?: string | null
+          city?: string | null
+          postal_code?: string | null
+          contact_person?: string | null
+          payment_terms?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string | null
+          phone?: string | null
+          address?: string | null
+          city?: string | null
+          postal_code?: string | null
+          contact_person?: string | null
+          payment_terms?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
       daily_reconciliations: {
         Row: {
           actual_cash: number | null
@@ -129,6 +232,7 @@ export type Database = {
       receivables: {
         Row: {
           id: string
+          customer_id: string | null
           customer_name: string
           description: string | null
           amount: number
@@ -143,6 +247,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          customer_id?: string | null
           customer_name: string
           description?: string | null
           amount: number
@@ -157,6 +262,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          customer_id?: string | null
           customer_name?: string
           description?: string | null
           amount?: number
@@ -169,7 +275,15 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "receivables_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       receivable_payments: {
         Row: {
@@ -291,6 +405,7 @@ export type Database = {
           id: string
           date: string
           voucher_no: string
+          supplier_id: string | null
           supplier_name: string
           or_no: string | null
           items: string
@@ -307,6 +422,7 @@ export type Database = {
           id?: string
           date?: string
           voucher_no: string
+          supplier_id?: string | null
           supplier_name: string
           or_no?: string | null
           items: string
@@ -323,6 +439,7 @@ export type Database = {
           id?: string
           date?: string
           voucher_no?: string
+          supplier_id?: string | null
           supplier_name?: string
           or_no?: string | null
           items?: string
@@ -335,7 +452,15 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

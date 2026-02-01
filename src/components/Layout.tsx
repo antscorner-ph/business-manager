@@ -1,12 +1,17 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Calculator,
   Users,
   ShoppingCart,
   Landmark,
-  History,
+  BarChart3,
+  Package,
+  LogOut,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import {
   Sidebar,
   SidebarContent,
@@ -31,9 +36,28 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const isActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Success",
+        description: "Logged out successfully",
+      });
+      navigate("/login");
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to log out",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -66,7 +90,7 @@ export function Layout({ children }: LayoutProps) {
                   <SidebarMenuButton asChild isActive={isActive("/reconciliation")}>
                     <Link to="/reconciliation">
                       <Calculator className="h-4 w-4" />
-                      <span>Daily Sales</span>
+                      <span>Daily Reconciliation</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -99,10 +123,28 @@ export function Layout({ children }: LayoutProps) {
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/customers")}>
+                    <Link to="/customers">
+                      <Users className="h-4 w-4" />
+                      <span>Customers</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/suppliers")}>
+                    <Link to="/suppliers">
+                      <Package className="h-4 w-4" />
+                      <span>Suppliers</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/history")}>
                     <Link to="/history">
-                      <History className="h-4 w-4" />
-                      <span>History</span>
+                      <BarChart3 className="h-4 w-4" />
+                      <span>Sales History</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -116,6 +158,10 @@ export function Layout({ children }: LayoutProps) {
           <SidebarTrigger />
           <div className="h-4 w-px bg-border" />
           <div className="flex-1" />
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
         </header>
         <div className="flex-1 overflow-auto">
           {children}
