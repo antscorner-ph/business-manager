@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, TrendingUp, TrendingDown, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { DailyReportDialog } from "@/components/DailyReportDialog";
+import { PageContainer } from "@/components/PageContainer";
+import { PageHeader } from "@/components/PageHeader";
 
 interface DailyReconciliation {
   id: string;
@@ -87,16 +89,10 @@ const History = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Sales History</h1>
-          <p className="text-muted-foreground">
-            View past daily sales records
-          </p>
-        </div>
+    <PageContainer>
+      <PageHeader title="Sales History" description="View past daily sales records" />
 
-        <Card>
+      <Card>
           <CardHeader>
             <CardTitle>Daily Records</CardTitle>
           </CardHeader>
@@ -165,14 +161,13 @@ const History = () => {
             )}
           </CardContent>
         </Card>
-      </main>
 
       <DailyReportDialog
         open={reportOpen}
         onOpenChange={setReportOpen}
         reconciliation={selectedRecord}
       />
-    </div>
+    </PageContainer>
   );
 };
 

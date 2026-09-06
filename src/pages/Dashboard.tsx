@@ -1,4 +1,4 @@
-import { format, startOfWeek, endOfWeek, startOfMonth } from "date-fns";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 import { Link } from "react-router-dom";
 import {
   Wallet,
@@ -12,6 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageContainer } from "@/components/PageContainer";
+import { PageHeader } from "@/components/PageHeader";
+import { PageLoader } from "@/components/PageLoader";
 import { useReconciliation } from "@/hooks/useReconciliation";
 import { useReceivables } from "@/hooks/useReceivables";
 import { useBankDeposits } from "@/hooks/useBankDeposits";
@@ -72,23 +75,15 @@ const Dashboard = () => {
     .slice(0, 5);
 
   if (reconciliationLoading || receivablesLoading || depositsLoading || purchaseOrdersLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            {format(new Date(), "EEEE, MMMM d, yyyy")}
-          </p>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="Dashboard"
+        description={format(new Date(), "EEEE, MMMM d, yyyy")}
+      />
 
         {/* Key Metrics */}
         <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
@@ -402,8 +397,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </PageContainer>
   );
 };
 

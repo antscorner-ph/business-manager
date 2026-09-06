@@ -1,6 +1,9 @@
 import { PurchaseOrdersManager } from "@/components/PurchaseOrdersManager";
 import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
 import { SummaryCard } from "@/components/SummaryCard";
+import { PageContainer } from "@/components/PageContainer";
+import { PageHeader } from "@/components/PageHeader";
+import { PageLoader } from "@/components/PageLoader";
 import { ShoppingCart, CheckCircle2, Clock, DollarSign } from "lucide-react";
 
 const PurchaseOrders = () => {
@@ -10,7 +13,6 @@ const PurchaseOrders = () => {
     query,
     setQuery,
     loading,
-    addPurchaseOrder,
     updatePurchaseOrder,
     updatePaymentStatus,
     updateStatus,
@@ -36,59 +38,50 @@ const PurchaseOrders = () => {
     .reduce((sum, po) => sum + po.total_amount, 0);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Purchase Orders</h1>
-          <p className="text-muted-foreground">
-            Handle supplier orders and payment tracking
-          </p>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="Purchase Orders"
+        description="Handle supplier orders and payment tracking"
+      />
 
-        <div className="grid gap-4 md:grid-cols-4 mb-8">
-          <SummaryCard
-            title="Total Amount"
-            value={formatCurrency(totalAmount)}
-            icon={ShoppingCart}
-          />
-          <SummaryCard
-            title="Total Paid"
-            value={formatCurrency(totalPaid)}
-            icon={CheckCircle2}
-          />
-          <SummaryCard
-            title="Total Unpaid"
-            value={formatCurrency(totalUnpaid)}
-            icon={Clock}
-          />
-          <SummaryCard
-            title="Total Partial"
-            value={formatCurrency(totalPartial)}
-            icon={DollarSign}
-          />
-        </div>
-
-        <PurchaseOrdersManager
-          purchaseOrders={purchaseOrders}
-          totalCount={totalCount}
-          query={query}
-          onQueryChange={setQuery}
-          onAddPurchaseOrder={addPurchaseOrder}
-          onUpdatePurchaseOrder={updatePurchaseOrder}
-          onUpdatePaymentStatus={updatePaymentStatus}
-          onUpdateStatus={updateStatus}
-          onDeletePurchaseOrder={deletePurchaseOrder}
+      <div className="grid gap-4 md:grid-cols-4 mb-8">
+        <SummaryCard
+          title="Total Amount"
+          value={formatCurrency(totalAmount)}
+          icon={ShoppingCart}
         />
-      </main>
-    </div>
+        <SummaryCard
+          title="Total Paid"
+          value={formatCurrency(totalPaid)}
+          icon={CheckCircle2}
+        />
+        <SummaryCard
+          title="Total Unpaid"
+          value={formatCurrency(totalUnpaid)}
+          icon={Clock}
+        />
+        <SummaryCard
+          title="Total Partial"
+          value={formatCurrency(totalPartial)}
+          icon={DollarSign}
+        />
+      </div>
+
+      <PurchaseOrdersManager
+        purchaseOrders={purchaseOrders}
+        totalCount={totalCount}
+        query={query}
+        onQueryChange={setQuery}
+        onUpdatePurchaseOrder={updatePurchaseOrder}
+        onUpdatePaymentStatus={updatePaymentStatus}
+        onUpdateStatus={updateStatus}
+        onDeletePurchaseOrder={deletePurchaseOrder}
+      />
+    </PageContainer>
   );
 };
 

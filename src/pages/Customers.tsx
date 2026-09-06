@@ -1,4 +1,7 @@
 import { CustomersManager } from "@/components/CustomersManager";
+import { PageContainer } from "@/components/PageContainer";
+import { PageHeader } from "@/components/PageHeader";
+import { PageLoader } from "@/components/PageLoader";
 import { useCustomers } from "@/hooks/useCustomers";
 
 const Customers = () => {
@@ -14,34 +17,26 @@ const Customers = () => {
   } = useCustomers();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
-          <p className="text-muted-foreground">
-            Manage customer information and contact details
-          </p>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="Customers"
+        description="Manage customer information and contact details"
+      />
 
-        <CustomersManager
-          customers={customers}
-          totalCount={totalCount}
-          query={query}
-          onQueryChange={setQuery}
-          onAddCustomer={addCustomer}
-          onUpdateCustomer={updateCustomer}
-          onDeleteCustomer={deleteCustomer}
-        />
-      </main>
-    </div>
+      <CustomersManager
+        customers={customers}
+        totalCount={totalCount}
+        query={query}
+        onQueryChange={setQuery}
+        onAddCustomer={addCustomer}
+        onUpdateCustomer={updateCustomer}
+        onDeleteCustomer={deleteCustomer}
+      />
+    </PageContainer>
   );
 };
 

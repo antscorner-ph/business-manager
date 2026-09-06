@@ -1,4 +1,7 @@
 import { ReceivablesManager } from "@/components/ReceivablesManager";
+import { PageContainer } from "@/components/PageContainer";
+import { PageHeader } from "@/components/PageHeader";
+import { PageLoader } from "@/components/PageLoader";
 import { useReceivables } from "@/hooks/useReceivables";
 
 const Receivables = () => {
@@ -14,34 +17,26 @@ const Receivables = () => {
   } = useReceivables();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Receivables</h1>
-          <p className="text-muted-foreground">
-            Manage customer accounts and payment tracking
-          </p>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="Receivables"
+        description="Manage customer accounts and payment tracking"
+      />
 
-        <ReceivablesManager
-          receivables={receivables}
-          totalCount={totalCount}
-          query={query}
-          onQueryChange={setQuery}
-          onAddReceivable={addReceivable}
-          onAddPayment={addPayment}
-          onUpdateStatus={updateStatus}
-        />
-      </main>
-    </div>
+      <ReceivablesManager
+        receivables={receivables}
+        totalCount={totalCount}
+        query={query}
+        onQueryChange={setQuery}
+        onAddReceivable={addReceivable}
+        onAddPayment={addPayment}
+        onUpdateStatus={updateStatus}
+      />
+    </PageContainer>
   );
 };
 

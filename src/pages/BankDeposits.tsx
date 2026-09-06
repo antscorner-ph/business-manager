@@ -1,4 +1,7 @@
 import { BankDepositsManager } from "@/components/BankDepositsManager";
+import { PageContainer } from "@/components/PageContainer";
+import { PageHeader } from "@/components/PageHeader";
+import { PageLoader } from "@/components/PageLoader";
 import { useBankDeposits } from "@/hooks/useBankDeposits";
 
 const BankDeposits = () => {
@@ -15,35 +18,27 @@ const BankDeposits = () => {
   } = useBankDeposits();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Bank Deposits</h1>
-          <p className="text-muted-foreground">
-            Manage deposit records with itemized breakdowns
-          </p>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="Bank Deposits"
+        description="Manage deposit records with itemized breakdowns"
+      />
 
-        <BankDepositsManager
-          deposits={deposits}
-          depositItems={depositItems}
-          totalCount={totalCount}
-          query={query}
-          onQueryChange={setQuery}
-          onAddDeposit={addDeposit}
-          onAddDepositItem={addDepositItem}
-          onUpdateStatus={updateStatus}
-        />
-      </main>
-    </div>
+      <BankDepositsManager
+        deposits={deposits}
+        depositItems={depositItems}
+        totalCount={totalCount}
+        query={query}
+        onQueryChange={setQuery}
+        onAddDeposit={addDeposit}
+        onAddDepositItem={addDepositItem}
+        onUpdateStatus={updateStatus}
+      />
+    </PageContainer>
   );
 };
 

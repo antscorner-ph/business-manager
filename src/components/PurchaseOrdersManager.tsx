@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -8,7 +9,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Pencil, Trash2, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, ChevronLeft, ChevronRight, Search, Eye } from "lucide-react";
 import {
   PurchaseOrder,
   CreatePurchaseOrderData,
@@ -45,13 +45,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { POItemsDialog } from "@/components/POItemsDialog";
 
 interface PurchaseOrdersManagerProps {
   purchaseOrders: PurchaseOrder[];
   totalCount: number;
   query: PurchaseOrdersQuery;
   onQueryChange: (query: PurchaseOrdersQuery) => void;
-  onAddPurchaseOrder: (data: CreatePurchaseOrderData) => Promise<boolean>;
   onUpdatePurchaseOrder: (id: string, updates: Partial<PurchaseOrder>) => Promise<boolean>;
   onUpdatePaymentStatus: (id: string, paymentStatus: 'unpaid' | 'partial' | 'paid', partialPaymentNotes?: string) => Promise<boolean>;
   onUpdateStatus: (id: string, status: 'pending' | 'approved' | 'cancelled') => Promise<boolean>;
@@ -63,23 +63,21 @@ export const PurchaseOrdersManager = ({
   totalCount,
   query,
   onQueryChange,
-  onAddPurchaseOrder,
   onUpdatePurchaseOrder,
   onUpdatePaymentStatus,
   onUpdateStatus,
   onDeletePurchaseOrder,
 }: PurchaseOrdersManagerProps) => {
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemsDialogOpen, setItemsDialogOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   const [formData, setFormData] = useState<CreatePurchaseOrderData>({
     date: new Date().toISOString().split("T")[0],
     voucher_no: "",
     supplier_name: "",
     or_no: "",
-    items: "",
     total_amount: 0,
     partial_payment_notes: "",
     payment_status: "unpaid",
@@ -91,27 +89,6 @@ export const PurchaseOrdersManager = ({
 
   // Pagination logic
   const totalPages = Math.ceil(totalCount / query.pageSize);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const success = await onAddPurchaseOrder(formData);
-    if (success) {
-      setIsAddDialogOpen(false);
-      setFormData({
-        date: new Date().toISOString().split("T")[0],
-        voucher_no: "",
-        supplier_name: "",
-        or_no: "",
-        items: "",
-        total_amount: 0,
-        partial_payment_notes: "",
-        payment_status: "unpaid",
-        status: "pending",
-        delivered_date: "",
-        notes: "",
-      });
-    }
-  };
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +140,6 @@ export const PurchaseOrdersManager = ({
       voucher_no: po.voucher_no,
       supplier_name: po.supplier_name,
       or_no: po.or_no || "",
-      items: po.items,
       total_amount: po.total_amount,
       partial_payment_notes: po.partial_payment_notes || "",
       payment_status: po.payment_status,
@@ -183,6 +159,11 @@ export const PurchaseOrdersManager = ({
   const openDeleteDialog = (po: PurchaseOrder) => {
     setSelectedPO(po);
     setDeleteDialogOpen(true);
+  };
+
+  const openItemsDialog = (po: PurchaseOrder) => {
+    setSelectedPO(po);
+    setItemsDialogOpen(true);
   };
 
   const getPaymentStatusBadge = (status: string) => {
@@ -210,182 +191,12 @@ export const PurchaseOrdersManager = ({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <CardTitle>Purchase Orders</CardTitle>
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Purchase Order
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <form onSubmit={handleSubmit}>
-                  <DialogHeader>
-                    <DialogTitle>Add New Purchase Order</DialogTitle>
-                    <DialogDescription>
-                      Create a new purchase order record
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="date">Date *</Label>
-                        <Input
-                          id="date"
-                          type="date"
-                          value={formData.date}
-                          onChange={(e) =>
-                            setFormData({ ...formData, date: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="voucher_no">Voucher No *</Label>
-                        <Input
-                          id="voucher_no"
-                          value={formData.voucher_no}
-                          onChange={(e) =>
-                            setFormData({ ...formData, voucher_no: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="supplier_name">Supplier Name *</Label>
-                        <Input
-                          id="supplier_name"
-                          value={formData.supplier_name}
-                          onChange={(e) =>
-                            setFormData({ ...formData, supplier_name: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="or_no">OR No.</Label>
-                        <Input
-                          id="or_no"
-                          value={formData.or_no}
-                          onChange={(e) =>
-                            setFormData({ ...formData, or_no: e.target.value })
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="items">Items *</Label>
-                      <Textarea
-                        id="items"
-                        value={formData.items}
-                        onChange={(e) =>
-                          setFormData({ ...formData, items: e.target.value })
-                        }
-                        placeholder="List of items"
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="total_amount">Total Amount *</Label>
-                        <Input
-                          id="total_amount"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={formData.total_amount}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              total_amount: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="partial_payment_notes">Partial Payment Notes</Label>
-                        <Textarea
-                          id="partial_payment_notes"
-                          value={formData.partial_payment_notes}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              partial_payment_notes: e.target.value,
-                            })
-                          }
-                          placeholder="Payment notes and history"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="payment_status">Payment Status</Label>
-                        <Select
-                          value={formData.payment_status}
-                          onValueChange={(value: PurchaseOrder["payment_status"]) =>
-                            setFormData({ ...formData, payment_status: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="unpaid">Unpaid</SelectItem>
-                            <SelectItem value="partial">Partial</SelectItem>
-                            <SelectItem value="paid">Paid</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="status">Status</Label>
-                        <Select
-                          value={formData.status}
-                          onValueChange={(value: PurchaseOrder["status"]) =>
-                            setFormData({ ...formData, status: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="approved">Approved</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="delivered_date">Delivered Date</Label>
-                      <Input
-                        id="delivered_date"
-                        type="date"
-                        value={formData.delivered_date}
-                        onChange={(e) =>
-                          setFormData({ ...formData, delivered_date: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="notes">Notes</Label>
-                      <Textarea
-                        id="notes"
-                        value={formData.notes}
-                        onChange={(e) =>
-                          setFormData({ ...formData, notes: e.target.value })
-                        }
-                        placeholder="Additional notes"
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit">Create Purchase Order</Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+              <Button asChild>
+                <Link to="/purchase-orders/new">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Generate Purchase Order
+                </Link>
+              </Button>
           </div>
             <div className="grid gap-4 md:grid-cols-5">
               <div className="flex items-center gap-2">
@@ -482,7 +293,15 @@ export const PurchaseOrdersManager = ({
                       <TableCell className="font-medium">{po.voucher_no}</TableCell>
                       <TableCell>{po.supplier_name}</TableCell>
                       <TableCell>{po.or_no || "-"}</TableCell>
-                      <TableCell className="max-w-xs truncate">{po.items}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="link"
+                          className="h-auto p-0"
+                          onClick={() => openItemsDialog(po)}
+                        >
+                          {po.item_count} {po.item_count === 1 ? "item" : "items"}
+                        </Button>
+                      </TableCell>
                       <TableCell className="text-right">
                         ₱{po.total_amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                       </TableCell>
@@ -496,6 +315,14 @@ export const PurchaseOrdersManager = ({
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openItemsDialog(po)}
+                            title="View Items"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -618,18 +445,6 @@ export const PurchaseOrdersManager = ({
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-items">Items *</Label>
-                <Textarea
-                  id="edit-items"
-                  value={formData.items}
-                  onChange={(e) =>
-                    setFormData({ ...formData, items: e.target.value })
-                  }
-                  placeholder="List of items"
-                  required
-                />
-              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-total_amount">Total Amount *</Label>
@@ -739,6 +554,16 @@ export const PurchaseOrdersManager = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* View Items Dialog */}
+      <POItemsDialog
+        open={itemsDialogOpen}
+        onOpenChange={setItemsDialogOpen}
+        purchaseOrderId={selectedPO?.id ?? null}
+        voucherNo={selectedPO?.voucher_no}
+        supplierName={selectedPO?.supplier_name}
+        date={selectedPO?.date}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

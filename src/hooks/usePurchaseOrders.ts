@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { computeLineTotal, type DraftLineItem } from "@/hooks/usePurchaseOrderItems";
 
 export interface PurchaseOrder {
   id: string;
@@ -8,7 +9,6 @@ export interface PurchaseOrder {
   voucher_no: string;
   supplier_name: string;
   or_no: string | null;
-  items: string;
   total_amount: number;
   partial_payment_notes: string | null;
   payment_status: 'unpaid' | 'partial' | 'paid';
@@ -17,6 +17,8 @@ export interface PurchaseOrder {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  /** Number of structured line items on this PO (derived from purchase_order_items). */
+  item_count: number;
 }
 
 export interface CreatePurchaseOrderData {
@@ -24,7 +26,6 @@ export interface CreatePurchaseOrderData {
   voucher_no: string;
   supplier_name: string;
   or_no?: string;
-  items: string;
   total_amount: number;
   partial_payment_notes?: string;
   payment_status?: 'unpaid' | 'partial' | 'paid';
@@ -69,7 +70,7 @@ export const usePurchaseOrders = () => {
 
       let request = supabase
         .from("purchase_orders")
-        .select("*", { count: "exact" });
+        .select("*, purchase_order_items(count)", { count: "exact" });
 
       if (query.search) {
         const search = `%${query.search}%`;
@@ -101,7 +102,19 @@ export const usePurchaseOrders = () => {
 
       if (queryError) throw queryError;
 
-      setPurchaseOrders(data || []);
+      // Supabase returns the embedded count as purchase_order_items: [{ count: n }].
+      type Row = Record<string, unknown> & {
+        purchase_order_items?: { count: number }[] | null;
+      };
+      const mapped: PurchaseOrder[] = ((data as Row[]) || []).map((row) => {
+        const { purchase_order_items, ...rest } = row;
+        return {
+          ...(rest as Omit<PurchaseOrder, "item_count">),
+          item_count: purchase_order_items?.[0]?.count ?? 0,
+        };
+      });
+
+      setPurchaseOrders(mapped);
       setTotalCount(count || 0);
     } catch (err: unknown) {
       setError(err);
@@ -235,6 +248,74 @@ export const usePurchaseOrders = () => {
     }
   };
 
+  /**
+   * Create a purchase order together with its structured line items.
+   * Line items live in purchase_order_items; the PO header stores only the total.
+   * Returns the new purchase order id on success, or null on failure.
+   */
+  const createPurchaseOrderWithItems = async (
+    header: Omit<CreatePurchaseOrderData, "total_amount">,
+    lineItems: DraftLineItem[]
+  ): Promise<string | null> => {
+    try {
+      if (lineItems.length === 0) {
+        throw new Error("Add at least one product to the purchase order");
+      }
+
+      const total_amount = lineItems.reduce(
+        (sum, item) => sum + computeLineTotal(item),
+        0
+      );
+
+      const { data: poData, error: poError } = await supabase
+        .from("purchase_orders")
+        .insert([{ ...header, total_amount }])
+        .select("id")
+        .single();
+
+      if (poError) throw poError;
+
+      const purchaseOrderId = poData.id;
+
+      const rows = lineItems.map((item) => ({
+        purchase_order_id: purchaseOrderId,
+        product_sku: item.product_sku,
+        name: item.name,
+        unit: item.unit || null,
+        po_in_pcs: item.po_in_pcs,
+        unit_cost: item.unit_cost,
+        line_total: computeLineTotal(item),
+        inventory_note: item.inventory_note || null,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("purchase_order_items")
+        .insert(rows);
+
+      // If line items fail to insert, roll back the header so we don't leave an
+      // orphaned PO with no lines.
+      if (itemsError) {
+        await supabase.from("purchase_orders").delete().eq("id", purchaseOrderId);
+        throw itemsError;
+      }
+
+      toast({
+        title: "Success",
+        description: "Purchase order generated successfully",
+      });
+
+      await fetchPurchaseOrders();
+      return purchaseOrderId;
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
   return {
     purchaseOrders,
     totalCount,
@@ -242,6 +323,7 @@ export const usePurchaseOrders = () => {
     setQuery,
     loading,
     addPurchaseOrder,
+    createPurchaseOrderWithItems,
     updatePurchaseOrder,
     updatePaymentStatus,
     updateStatus,

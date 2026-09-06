@@ -1,4 +1,7 @@
 import { SuppliersManager } from "@/components/SuppliersManager";
+import { PageContainer } from "@/components/PageContainer";
+import { PageHeader } from "@/components/PageHeader";
+import { PageLoader } from "@/components/PageLoader";
 import { useSuppliers } from "@/hooks/useSuppliers";
 
 const Suppliers = () => {
@@ -14,34 +17,26 @@ const Suppliers = () => {
   } = useSuppliers();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Suppliers</h1>
-          <p className="text-muted-foreground">
-            Manage supplier information and payment terms
-          </p>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="Suppliers"
+        description="Manage supplier information and payment terms"
+      />
 
-        <SuppliersManager
-          suppliers={suppliers}
-          totalCount={totalCount}
-          query={query}
-          onQueryChange={setQuery}
-          onAddSupplier={addSupplier}
-          onUpdateSupplier={updateSupplier}
-          onDeleteSupplier={deleteSupplier}
-        />
-      </main>
-    </div>
+      <SuppliersManager
+        suppliers={suppliers}
+        totalCount={totalCount}
+        query={query}
+        onQueryChange={setQuery}
+        onAddSupplier={addSupplier}
+        onUpdateSupplier={updateSupplier}
+        onDeleteSupplier={deleteSupplier}
+      />
+    </PageContainer>
   );
 };
 

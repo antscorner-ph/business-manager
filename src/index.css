@@ -24,13 +24,13 @@ All colors MUST be HSL.
     --primary: 147 42% 23%;
     --primary-foreground: 0 0% 100%;
 
-    /* Light Gray for secondary */
-    --secondary: 60 25% 96%;
+    /* Warm neutral for secondary surfaces (distinct from background) */
+    --secondary: 48 15% 90%;
     --secondary-foreground: 210 8% 20%;
 
-    /* Muted using Light Gray */
-    --muted: 60 25% 96%;
-    --muted-foreground: 210 8% 40%;
+    /* Muted surfaces slightly deeper than background */
+    --muted: 48 15% 91%;
+    --muted-foreground: 210 8% 42%;
 
     /* Action Amber for accents/call-outs */
     --accent: 35 52% 64%;
@@ -45,9 +45,9 @@ All colors MUST be HSL.
     --warning: 35 52% 64%;
     --warning-foreground: 210 8% 20%;
 
-    /* Light Gray for borders */
-    --border: 60 25% 96%;
-    --input: 0 0% 100%;
+    /* Visible warm gray borders */
+    --border: 45 12% 84%;
+    --input: 45 12% 84%;
     --ring: 147 42% 23%;
 
     --radius: 0.75rem;
@@ -57,9 +57,9 @@ All colors MUST be HSL.
     --sidebar-foreground: 210 8% 20%;
     --sidebar-primary: 147 42% 23%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 60 25% 96%;
-    --sidebar-accent-foreground: 210 8% 20%;
-    --sidebar-border: 60 25% 96%;
+    --sidebar-accent: 147 30% 92%;
+    --sidebar-accent-foreground: 147 42% 23%;
+    --sidebar-border: 45 12% 88%;
     --sidebar-ring: 147 42% 23%;
   }
 

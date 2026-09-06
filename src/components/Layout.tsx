@@ -2,10 +2,13 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Calculator,
-  Users,
   ShoppingCart,
+  FilePlus2,
   Landmark,
-  BarChart3,
+  History as HistoryIcon,
+  HandCoins,
+  Contact,
+  Truck,
   Package,
   LogOut,
 } from "lucide-react";
@@ -22,9 +25,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger,
   SidebarInset,
@@ -34,14 +34,58 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+interface NavItem {
+  title: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+/**
+ * Navigation grouped by the store's daily workflow:
+ * record sales -> reconcile & deposit -> track money owed -> manage contacts -> review records.
+ */
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Daily Operations",
+    items: [
+      { title: "Dashboard", path: "/", icon: LayoutDashboard },
+      { title: "Daily Sales", path: "/reconciliation", icon: Calculator },
+      { title: "Bank Deposits", path: "/bank-deposits", icon: Landmark },
+    ],
+  },
+  {
+    label: "Money Tracking",
+    items: [
+      { title: "Receivables", path: "/receivables", icon: HandCoins },
+      { title: "Purchase Orders", path: "/purchase-orders", icon: ShoppingCart },
+      { title: "Generate PO", path: "/purchase-orders/new", icon: FilePlus2 },
+    ],
+  },
+  {
+    label: "Directory",
+    items: [
+      { title: "Products", path: "/products", icon: Package },
+      { title: "Customers", path: "/customers", icon: Contact },
+      { title: "Suppliers", path: "/suppliers", icon: Truck },
+    ],
+  },
+  {
+    label: "Records",
+    items: [{ title: "Sales History", path: "/history", icon: HistoryIcon }],
+  },
+];
+
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+  const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = async () => {
     try {
@@ -73,84 +117,28 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/")}>
-                    <Link to="/">
-                      <LayoutDashboard className="h-4 w-4" />
-                      <span>Dashboard</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/reconciliation")}>
-                    <Link to="/reconciliation">
-                      <Calculator className="h-4 w-4" />
-                      <span>Daily Reconciliation</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/receivables")}>
-                    <Link to="/receivables">
-                      <Users className="h-4 w-4" />
-                      <span>Receivables</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/bank-deposits")}>
-                    <Link to="/bank-deposits">
-                      <Landmark className="h-4 w-4" />
-                      <span>Bank Deposits</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/purchase-orders")}>
-                    <Link to="/purchase-orders">
-                      <ShoppingCart className="h-4 w-4" />
-                      <span>Purchase Orders</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/customers")}>
-                    <Link to="/customers">
-                      <Users className="h-4 w-4" />
-                      <span>Customers</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/suppliers")}>
-                    <Link to="/suppliers">
-                      <Package className="h-4 w-4" />
-                      <span>Suppliers</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/history")}>
-                    <Link to="/history">
-                      <BarChart3 className="h-4 w-4" />
-                      <span>Sales History</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {NAV_GROUPS.map((group) => (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton asChild isActive={isActive(item.path)}>
+                          <Link to={item.path}>
+                            <Icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
