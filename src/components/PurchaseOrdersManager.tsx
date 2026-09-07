@@ -46,6 +46,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { POItemsDialog } from "@/components/POItemsDialog";
+import { STATUS_TAG_CLASSES, formatTagLabel, getTagClass } from "@/lib/tagStyles";
+import { formatDate } from "@/lib/utils";
 
 interface PurchaseOrdersManagerProps {
   purchaseOrders: PurchaseOrder[];
@@ -167,21 +169,19 @@ export const PurchaseOrdersManager = ({
   };
 
   const getPaymentStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      unpaid: "destructive",
-      partial: "secondary",
-      paid: "default",
-    };
-    return <Badge variant={variants[status] || "default"}>{status}</Badge>;
+    return (
+      <Badge variant="outline" className={getTagClass(STATUS_TAG_CLASSES, status)}>
+        {formatTagLabel(status)}
+      </Badge>
+    );
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      pending: "secondary",
-      approved: "default",
-      cancelled: "destructive",
-    };
-    return <Badge variant={variants[status] || "default"}>{status}</Badge>;
+    return (
+      <Badge variant="outline" className={getTagClass(STATUS_TAG_CLASSES, status)}>
+        {formatTagLabel(status)}
+      </Badge>
+    );
   };
 
   return (
@@ -289,7 +289,7 @@ export const PurchaseOrdersManager = ({
                 ) : (
                   purchaseOrders.map((po) => (
                     <TableRow key={po.id}>
-                      <TableCell>{new Date(po.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{formatDate(po.date)}</TableCell>
                       <TableCell className="font-medium">{po.voucher_no}</TableCell>
                       <TableCell>{po.supplier_name}</TableCell>
                       <TableCell>{po.or_no || "-"}</TableCell>
@@ -310,9 +310,7 @@ export const PurchaseOrdersManager = ({
                       </TableCell>
                       <TableCell>{getPaymentStatusBadge(po.payment_status)}</TableCell>
                       <TableCell>{getStatusBadge(po.status)}</TableCell>
-                      <TableCell>
-                        {po.delivered_date ? new Date(po.delivered_date).toLocaleDateString() : "-"}
-                      </TableCell>
+                      <TableCell>{formatDate(po.delivered_date)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button

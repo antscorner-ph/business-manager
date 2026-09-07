@@ -33,7 +33,7 @@ export const useProductsList = () => {
 
       let request = supabase
         .from("products")
-        .select("sku, name, category, desc, price, qty, image", { count: "exact" });
+        .select("sku, name, category, desc, price, qty, image, low_stock", { count: "exact" });
 
       if (query.search) {
         const like = `%${query.search}%`;

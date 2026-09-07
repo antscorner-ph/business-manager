@@ -33,23 +33,45 @@ export function TransactionForm({ onAddTransaction }: TransactionFormProps) {
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
+  const [amountError, setAmountError] = useState("");
 
   const categories = type === "cash_in" ? cashInCategories : cashOutCategories;
 
+  const validateAmount = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "Amount is required";
+    if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return "Use up to 2 decimal places";
+
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed) || parsed <= 0) return "Amount must be greater than 0";
+
+    return "";
+  };
+
+  const currentAmountError = validateAmount(amount);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!category || !amount) return;
+
+    const validationError = validateAmount(amount);
+    if (validationError) {
+      setAmountError(validationError);
+      return;
+    }
+
+    if (!category) return;
 
     onAddTransaction({
       type,
       category,
       description,
-      amount: parseFloat(amount),
+      amount: Number(amount),
     });
 
     setCategory("");
     setDescription("");
     setAmount("");
+    setAmountError("");
   };
 
   return (
@@ -107,12 +129,21 @@ export function TransactionForm({ onAddTransaction }: TransactionFormProps) {
               step="0.01"
               min="0"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                setAmount(e.target.value);
+                if (amountError) {
+                  setAmountError(validateAmount(e.target.value));
+                }
+              }}
               placeholder="0.00"
+              aria-invalid={Boolean(amountError || currentAmountError)}
             />
+            {amountError && (
+              <p className="text-sm text-destructive">{amountError}</p>
+            )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={!category || !amount}>
+          <Button type="submit" className="w-full" disabled={!category || !!currentAmountError}>
             <Plus className="mr-2 h-4 w-4" />
             Add Transaction
           </Button>

@@ -2,16 +2,18 @@ import { format, startOfWeek, endOfWeek } from "date-fns";
 import { Link } from "react-router-dom";
 import {
   Wallet,
-  TrendingUp,
+  AlertTriangle,
   Users,
   Building2,
   Calculator,
   ShoppingCart,
+  CreditCard,
   ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_TAG_CLASSES, formatTagLabel, getTagClass } from "@/lib/tagStyles";
 import { PageContainer } from "@/components/PageContainer";
 import { PageHeader } from "@/components/PageHeader";
 import { PageLoader } from "@/components/PageLoader";
@@ -19,6 +21,7 @@ import { useReconciliation } from "@/hooks/useReconciliation";
 import { useReceivables } from "@/hooks/useReceivables";
 import { useBankDeposits } from "@/hooks/useBankDeposits";
 import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
+import { useExpenses } from "@/hooks/useExpenses";
 import {
   Table,
   TableBody,
@@ -30,9 +33,10 @@ import {
 
 const Dashboard = () => {
   const { reconciliation, loading: reconciliationLoading } = useReconciliation();
-  const { receivables, loading: receivablesLoading } = useReceivables();
+  const { receivables, kpiReceivables, loading: receivablesLoading } = useReceivables();
   const { deposits, loading: depositsLoading } = useBankDeposits();
-  const { purchaseOrders, loading: purchaseOrdersLoading } = usePurchaseOrders();
+  const { purchaseOrders, kpiPurchaseOrders, loading: purchaseOrdersLoading } = usePurchaseOrders();
+  const { kpiExpenses, loading: expensesLoading } = useExpenses();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PH", {
@@ -41,17 +45,26 @@ const Dashboard = () => {
     }).format(amount);
   };
 
+  const renderStatusTag = (value: string) => (
+    <Badge variant="outline" className={getTagClass(STATUS_TAG_CLASSES, value)}>
+      {formatTagLabel(value)}
+    </Badge>
+  );
+
   // Calculate totals
-  const todaySales = reconciliation?.total_cash_in || 0;
+  const todayCashIn = reconciliation?.total_cash_in || 0;
   const expectedBalance = reconciliation?.expected_balance || 0;
+
+  const today = new Date();
   
-  const totalReceivables = receivables
+  const totalReceivables = kpiReceivables
     .filter((r) => r.status !== "paid" && r.status !== "written_off")
     .reduce((sum, r) => sum + r.balance, 0);
   
-  const overdueReceivables = receivables.filter(
-    (r) => r.due_date && new Date(r.due_date) < new Date() && r.status === "pending"
+  const overdueReceivables = kpiReceivables.filter(
+    (r) => r.due_date && new Date(r.due_date) < today && r.status !== "paid" && r.status !== "written_off"
   );
+  const overdueReceivableAmount = overdueReceivables.reduce((sum, r) => sum + r.balance, 0);
 
   // Get this week's deposits
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -63,18 +76,42 @@ const Dashboard = () => {
   const weekDepositTotal = weekDeposits.reduce((sum, d) => sum + d.total_amount, 0);
 
   // Purchase Orders
-  const unpaidPurchaseOrders = purchaseOrders.filter(
+  const unpaidPurchaseOrders = kpiPurchaseOrders.filter(
     (po) => po.payment_status === "unpaid" || po.payment_status === "partial"
   );
   const totalUnpaidAmount = unpaidPurchaseOrders.reduce((sum, po) => sum + po.total_amount, 0);
-  const pendingPurchaseOrders = purchaseOrders.filter((po) => po.status === "pending");
+  const pendingPurchaseOrders = kpiPurchaseOrders.filter((po) => po.status === "pending");
+  const latePendingPurchaseOrders = pendingPurchaseOrders.filter(
+    (po) => (today.getTime() - new Date(po.date).getTime()) / (1000 * 60 * 60 * 24) > 14
+  );
+
+  const expensePayables = kpiExpenses
+    .filter((expense) => expense.status !== "paid")
+    .reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+  const netWorkingGap = totalReceivables - totalUnpaidAmount - expensePayables;
+
+  const criticalAlerts = [
+    overdueReceivableAmount > 0
+      ? `Overdue receivables: ${formatCurrency(overdueReceivableAmount)}`
+      : null,
+    expensePayables > 0
+      ? `Unpaid expenses: ${formatCurrency(expensePayables)}`
+      : null,
+    latePendingPurchaseOrders.length > 0
+      ? `${latePendingPurchaseOrders.length} pending POs are older than 14 days`
+      : null,
+    netWorkingGap < 0
+      ? `Working cash gap is negative by ${formatCurrency(Math.abs(netWorkingGap))}`
+      : null,
+  ].filter((item): item is string => Boolean(item));
 
   // Get recent receivables (last 5)
   const recentReceivables = receivables
     .filter((r) => r.status !== "paid" && r.status !== "written_off")
     .slice(0, 5);
 
-  if (reconciliationLoading || receivablesLoading || depositsLoading || purchaseOrdersLoading) {
+  if (reconciliationLoading || receivablesLoading || depositsLoading || purchaseOrdersLoading || expensesLoading) {
     return <PageLoader />;
   }
 
@@ -85,15 +122,31 @@ const Dashboard = () => {
         description={format(new Date(), "EEEE, MMMM d, yyyy")}
       />
 
+        {criticalAlerts.length > 0 && (
+          <Card className="mb-6 border-destructive/40">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Red Alerts Requiring Action
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {criticalAlerts.map((alert) => (
+                <p key={alert}>{alert}</p>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Key Metrics */}
         <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Sales</CardTitle>
+              <CardTitle className="text-sm font-medium">Today's Cash In</CardTitle>
               <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(todaySales)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(todayCashIn)}</div>
               <p className="text-xs text-muted-foreground">
                 Expected balance: {formatCurrency(expectedBalance)}
               </p>
@@ -102,26 +155,26 @@ const Dashboard = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Receivables</CardTitle>
+              <CardTitle className="text-sm font-medium">Net Working Gap</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(totalReceivables)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(netWorkingGap)}</div>
               <p className="text-xs text-muted-foreground">
-                {overdueReceivables.length} overdue
+                Receivables - PO payables - expense payables
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Week's Deposits</CardTitle>
+              <CardTitle className="text-sm font-medium">Overdue Receivables</CardTitle>
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(weekDepositTotal)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(overdueReceivableAmount)}</div>
               <p className="text-xs text-muted-foreground">
-                {weekDeposits.length} deposits this week
+                {overdueReceivables.length} accounts overdue
               </p>
             </CardContent>
           </Card>
@@ -141,15 +194,13 @@ const Dashboard = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Unpaid Expenses</CardTitle>
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {pendingPurchaseOrders.length}
-              </div>
+              <div className="text-2xl font-bold">{formatCurrency(expensePayables)}</div>
               <p className="text-xs text-muted-foreground">
-                {purchaseOrders.length} total orders
+                Week deposits: {formatCurrency(weekDepositTotal)}
               </p>
             </CardContent>
           </Card>
@@ -202,15 +253,7 @@ const Dashboard = () => {
                               : "-"}
                           </TableCell>
                           <TableCell>
-                            <Badge
-                              variant={
-                                receivable.status === "pending"
-                                  ? "destructive"
-                                  : "secondary"
-                              }
-                            >
-                              {receivable.status.toUpperCase()}
-                            </Badge>
+                            {renderStatusTag(receivable.status)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -264,17 +307,7 @@ const Dashboard = () => {
                           </TableCell>
                           <TableCell>{formatCurrency(deposit.total_amount)}</TableCell>
                           <TableCell>
-                            <Badge
-                              variant={
-                                deposit.status === "reconciled"
-                                  ? "outline"
-                                  : deposit.status === "confirmed"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                            >
-                              {deposit.status.toUpperCase()}
-                            </Badge>
+                            {renderStatusTag(deposit.status)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -325,30 +358,10 @@ const Dashboard = () => {
                           </TableCell>
                           <TableCell>{formatCurrency(po.total_amount)}</TableCell>
                           <TableCell>
-                            <Badge
-                              variant={
-                                po.payment_status === "paid"
-                                  ? "outline"
-                                  : po.payment_status === "partial"
-                                  ? "secondary"
-                                  : "destructive"
-                              }
-                            >
-                              {po.payment_status.toUpperCase()}
-                            </Badge>
+                            {renderStatusTag(po.payment_status)}
                           </TableCell>
                           <TableCell>
-                            <Badge
-                              variant={
-                                po.status === "approved"
-                                  ? "default"
-                                  : po.status === "cancelled"
-                                  ? "destructive"
-                                  : "secondary"
-                              }
-                            >
-                              {po.status.toUpperCase()}
-                            </Badge>
+                            {renderStatusTag(po.status)}
                           </TableCell>
                         </TableRow>
                       ))}

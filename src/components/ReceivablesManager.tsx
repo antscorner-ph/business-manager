@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Plus, X, DollarSign, Calendar, User, AlertCircle, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Plus, X, DollarSign, Calendar, User, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,8 +37,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ReceivablesQuery } from "@/hooks/useReceivables";
+import { STATUS_TAG_CLASSES, formatTagLabel, getTagClass } from "@/lib/tagStyles";
 
 export interface Receivable {
   id: string;
@@ -98,6 +98,7 @@ export function ReceivablesManager({
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentNotes, setPaymentNotes] = useState("");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Pagination logic
   const totalPages = Math.ceil(totalCount / query.pageSize);
@@ -136,41 +137,51 @@ export function ReceivablesManager({
     e.preventDefault();
     if (!selectedReceivable || !paymentAmount) return;
 
-    await onAddPayment({
-      receivable_id: selectedReceivable.id,
-      amount: parseFloat(paymentAmount),
-      payment_date: paymentDate,
-      payment_method: paymentMethod,
-      notes: paymentNotes || null,
-    });
+    const parsedAmount = Number(paymentAmount);
+    const remainingBalance = Number(selectedReceivable.balance || 0);
+
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setPaymentError("Payment amount must be greater than zero.");
+      return;
+    }
+
+    if (parsedAmount > remainingBalance) {
+      setPaymentError(`Payment exceeds remaining balance of ${formatCurrency(remainingBalance)}.`);
+      return;
+    }
+
+    setPaymentError(null);
+
+    try {
+      await onAddPayment({
+        receivable_id: selectedReceivable.id,
+        amount: parsedAmount,
+        payment_date: paymentDate,
+        payment_method: paymentMethod,
+        notes: paymentNotes || null,
+      });
+    } catch {
+      // The server enforces overpayment guards too; keep dialog open for correction.
+      return;
+    }
 
     // Reset form
     setPaymentAmount("");
     setPaymentDate(format(new Date(), "yyyy-MM-dd"));
     setPaymentMethod("cash");
     setPaymentNotes("");
+    setPaymentError(null);
     setPaymentDialogOpen(false);
     setSelectedReceivable(null);
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      pending: "destructive",
-      partially_paid: "secondary",
-      paid: "default",
-      written_off: "outline",
-    };
-
     return (
-      <Badge variant={variants[status] || "default"}>
-        {status.replace("_", " ").toUpperCase()}
+      <Badge variant="outline" className={getTagClass(STATUS_TAG_CLASSES, status)}>
+        {formatTagLabel(status)}
       </Badge>
     );
   };
-
-  const totalReceivable = receivables
-    .filter((r) => r.status !== "paid" && r.status !== "written_off")
-    .reduce((sum, r) => sum + r.balance, 0);
 
   return (
     <Card>
@@ -323,15 +334,6 @@ export function ReceivablesManager({
         </div>
       </CardHeader>
       <CardContent>
-        {totalReceivable > 0 && (
-          <Alert className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Total Outstanding:</strong> {formatCurrency(totalReceivable)}
-            </AlertDescription>
-          </Alert>
-        )}
-
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -378,6 +380,11 @@ export function ReceivablesManager({
                           variant="outline"
                           onClick={() => {
                             setSelectedReceivable(receivable);
+                            setPaymentAmount("");
+                            setPaymentDate(format(new Date(), "yyyy-MM-dd"));
+                            setPaymentMethod("cash");
+                            setPaymentNotes("");
+                            setPaymentError(null);
                             setPaymentDialogOpen(true);
                           }}
                         >
@@ -448,11 +455,22 @@ export function ReceivablesManager({
                     type="number"
                     step="0.01"
                     value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    onChange={(e) => {
+                      setPaymentAmount(e.target.value);
+                      setPaymentError(null);
+                    }}
                     placeholder="0.00"
                     max={selectedReceivable?.balance}
                     required
                   />
+                  {selectedReceivable ? (
+                    <p className="text-xs text-muted-foreground">
+                      Remaining balance: {formatCurrency(selectedReceivable.balance)}
+                    </p>
+                  ) : null}
+                  {paymentError ? (
+                    <p className="text-xs text-destructive">{paymentError}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="paymentDate">Payment Date</Label>
@@ -496,6 +514,7 @@ export function ReceivablesManager({
                   onClick={() => {
                     setPaymentDialogOpen(false);
                     setSelectedReceivable(null);
+                    setPaymentError(null);
                   }}
                 >
                   Cancel

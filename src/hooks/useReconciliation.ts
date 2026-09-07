@@ -172,6 +172,9 @@ export function useReconciliation() {
         total_cash_in: cashIn,
         total_cash_out: cashOut,
         expected_balance: expected,
+        actual_cash: null,
+        variance: null,
+        status: "pending",
       })
       .eq("id", reconciliation.id)
       .select()
@@ -191,7 +194,10 @@ export function useReconciliation() {
         .from("daily_reconciliations")
         .update({ 
           opening_balance: amount,
-          expected_balance: expected
+          expected_balance: expected,
+          actual_cash: null,
+          variance: null,
+          status: "pending"
         })
         .eq("id", reconciliation.id)
         .select()

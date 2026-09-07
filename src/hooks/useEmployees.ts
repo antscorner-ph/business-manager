@@ -7,7 +7,7 @@ export interface Employee {
   name: string;
   role: string | null;
   hourly_rate: number | null;
-  pin: string | null;
+  has_pin: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -32,13 +32,28 @@ export const useEmployees = (includeInactive = false) => {
   const fetchEmployees = useCallback(async () => {
     setLoading(true);
     try {
-      let request = supabase.from("employees").select("*").order("name", { ascending: true });
+      let request = (supabase as any)
+        .from("employees")
+        .select("id,name,role,hourly_rate,is_active,created_at,updated_at,pin_hash")
+        .order("name", { ascending: true });
       if (!includeInactive) {
         request = request.eq("is_active", true);
       }
       const { data, error } = await request;
       if (error) throw error;
-      setEmployees(data || []);
+
+      const mapped: Employee[] = (data || []).map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        role: row.role,
+        hourly_rate: row.hourly_rate,
+        has_pin: !!row.pin_hash,
+        is_active: row.is_active,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      }));
+
+      setEmployees(mapped);
     } catch (error: unknown) {
       toast({
         title: "Error",
@@ -75,9 +90,33 @@ export const useEmployees = (includeInactive = false) => {
 
   const addEmployee = async (data: CreateEmployeeData) => {
     try {
-      const { error } = await supabase.from("employees").insert([data]);
+      const pin = data.pin?.trim() ? data.pin.trim() : null;
+      const payload = {
+        name: data.name,
+        role: data.role ?? null,
+        hourly_rate: data.hourly_rate ?? null,
+        is_active: data.is_active ?? true,
+        pin: null,
+      };
+
+      const { data: inserted, error } = await (supabase as any)
+        .from("employees")
+        .insert([payload])
+        .select("id")
+        .single();
+
       if (error) throw error;
+
+      if (pin) {
+        const { error: pinError } = await (supabase as any).rpc("set_employee_pin", {
+          p_employee_id: inserted.id,
+          p_pin: pin,
+        });
+        if (pinError) throw pinError;
+      }
+
       toast({ title: "Success", description: "Employee added" });
+      await fetchRef.current();
       return true;
     } catch (error: unknown) {
       toast({
@@ -91,9 +130,25 @@ export const useEmployees = (includeInactive = false) => {
 
   const updateEmployee = async (id: string, data: Partial<CreateEmployeeData>) => {
     try {
-      const { error } = await supabase.from("employees").update(data).eq("id", id);
+      const pinProvided = Object.prototype.hasOwnProperty.call(data, "pin");
+      const pin = data.pin?.trim() ? data.pin.trim() : null;
+
+      const payload: Partial<CreateEmployeeData> = { ...data };
+      delete payload.pin;
+
+      const { error } = await supabase.from("employees").update(payload).eq("id", id);
       if (error) throw error;
+
+      if (pinProvided) {
+        const { error: pinError } = await (supabase as any).rpc("set_employee_pin", {
+          p_employee_id: id,
+          p_pin: pin,
+        });
+        if (pinError) throw pinError;
+      }
+
       toast({ title: "Success", description: "Employee updated" });
+      await fetchRef.current();
       return true;
     } catch (error: unknown) {
       toast({

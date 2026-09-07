@@ -24,6 +24,7 @@ export interface PurchaseOrder {
 export interface CreatePurchaseOrderData {
   date: string;
   voucher_no: string;
+  supplier_id?: string;
   supplier_name: string;
   or_no?: string;
   total_amount: number;
@@ -41,10 +42,15 @@ export type PurchaseOrdersQuery = {
   sortBy: "date" | "amount" | "supplier";
   paymentStatus: "all" | "unpaid" | "partial" | "paid";
   status: "all" | "pending" | "approved" | "cancelled";
+  startDate: string;
+  endDate: string;
 };
 
 export const usePurchaseOrders = () => {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [kpiPurchaseOrders, setKpiPurchaseOrders] = useState<
+    Array<Pick<PurchaseOrder, "total_amount" | "payment_status" | "status" | "date" | "delivered_date" | "supplier_name">>
+  >([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
@@ -55,6 +61,8 @@ export const usePurchaseOrders = () => {
     sortBy: "date",
     paymentStatus: "all",
     status: "all",
+    startDate: "",
+    endDate: "",
   });
   const { toast } = useToast();
 
@@ -68,39 +76,64 @@ export const usePurchaseOrders = () => {
       const from = (query.page - 1) * query.pageSize;
       const to = from + query.pageSize - 1;
 
-      let request = supabase
+      let listRequest = supabase
         .from("purchase_orders")
         .select("*, purchase_order_items(count)", { count: "exact" });
 
+      let kpiRequest = supabase
+        .from("purchase_orders")
+        .select("total_amount,payment_status,status,date,delivered_date,supplier_name");
+
       if (query.search) {
         const search = `%${query.search}%`;
-        request = request.or(`voucher_no.ilike.${search},supplier_name.ilike.${search}`);
+        const filter = `voucher_no.ilike.${search},supplier_name.ilike.${search}`;
+        listRequest = listRequest.or(filter);
+        kpiRequest = kpiRequest.or(filter);
       }
 
       if (query.paymentStatus !== "all") {
-        request = request.eq("payment_status", query.paymentStatus);
+        listRequest = listRequest.eq("payment_status", query.paymentStatus);
+        kpiRequest = kpiRequest.eq("payment_status", query.paymentStatus);
       }
 
       if (query.status !== "all") {
-        request = request.eq("status", query.status);
+        listRequest = listRequest.eq("status", query.status);
+        kpiRequest = kpiRequest.eq("status", query.status);
+      }
+
+      if (query.startDate) {
+        listRequest = listRequest.gte("date", query.startDate);
+        kpiRequest = kpiRequest.gte("date", query.startDate);
+      }
+
+      if (query.endDate) {
+        listRequest = listRequest.lte("date", query.endDate);
+        kpiRequest = kpiRequest.lte("date", query.endDate);
       }
 
       switch (query.sortBy) {
         case "amount":
-          request = request.order("total_amount", { ascending: false });
+          listRequest = listRequest.order("total_amount", { ascending: false });
           break;
         case "supplier":
-          request = request.order("supplier_name", { ascending: true });
+          listRequest = listRequest.order("supplier_name", { ascending: true });
           break;
         case "date":
         default:
-          request = request.order("date", { ascending: false });
+          listRequest = listRequest.order("date", { ascending: false });
           break;
       }
 
-      const { data, error: queryError, count } = await request.range(from, to);
+      const [listResult, kpiResult] = await Promise.all([
+        listRequest.range(from, to),
+        kpiRequest,
+      ]);
+
+      const { data, error: queryError, count } = listResult;
+      const { data: kpiData, error: kpiError } = kpiResult;
 
       if (queryError) throw queryError;
+      if (kpiError) throw kpiError;
 
       // Supabase returns the embedded count as purchase_order_items: [{ count: n }].
       type Row = Record<string, unknown> & {
@@ -115,6 +148,7 @@ export const usePurchaseOrders = () => {
       });
 
       setPurchaseOrders(mapped);
+      setKpiPurchaseOrders((kpiData as Array<Pick<PurchaseOrder, "total_amount" | "payment_status" | "status" | "date" | "delivered_date" | "supplier_name">>) || []);
       setTotalCount(count || 0);
     } catch (err: unknown) {
       setError(err);
@@ -267,37 +301,18 @@ export const usePurchaseOrders = () => {
         0
       );
 
-      const { data: poData, error: poError } = await supabase
-        .from("purchase_orders")
-        .insert([{ ...header, total_amount }])
-        .select("id")
-        .single();
+      const { data: purchaseOrderId, error } = await (supabase as any).rpc(
+        "create_purchase_order_with_items",
+        {
+          p_header: {
+            ...header,
+            total_amount,
+          },
+          p_items: lineItems,
+        }
+      );
 
-      if (poError) throw poError;
-
-      const purchaseOrderId = poData.id;
-
-      const rows = lineItems.map((item) => ({
-        purchase_order_id: purchaseOrderId,
-        product_sku: item.product_sku,
-        name: item.name,
-        unit: item.unit || null,
-        po_in_pcs: item.po_in_pcs,
-        unit_cost: item.unit_cost,
-        line_total: computeLineTotal(item),
-        inventory_note: item.inventory_note || null,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from("purchase_order_items")
-        .insert(rows);
-
-      // If line items fail to insert, roll back the header so we don't leave an
-      // orphaned PO with no lines.
-      if (itemsError) {
-        await supabase.from("purchase_orders").delete().eq("id", purchaseOrderId);
-        throw itemsError;
-      }
+      if (error) throw error;
 
       toast({
         title: "Success",
@@ -318,6 +333,7 @@ export const usePurchaseOrders = () => {
 
   return {
     purchaseOrders,
+    kpiPurchaseOrders,
     totalCount,
     query,
     setQuery,

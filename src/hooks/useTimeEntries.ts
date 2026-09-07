@@ -131,11 +131,12 @@ export const useTimeEntries = () => {
   const getEntriesInRange = useCallback(
     async (startISO: string, endISO: string, employeeId?: string): Promise<TimeEntry[]> => {
       try {
+        // Overlap condition: entry starts before range end AND (no clock_out OR clock_out after range start).
         let request = supabase
           .from("time_entries")
           .select("*")
-          .gte("clock_in", startISO)
           .lte("clock_in", endISO)
+          .or(`clock_out.is.null,clock_out.gte.${startISO}`)
           .order("clock_in", { ascending: false });
         if (employeeId) request = request.eq("employee_id", employeeId);
         const { data, error } = await request;

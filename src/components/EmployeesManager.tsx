@@ -73,7 +73,7 @@ export function EmployeesManager({ employees, onAdd, onUpdate, onDelete }: Emplo
       name: employee.name,
       role: employee.role ?? "",
       hourly_rate: employee.hourly_rate,
-      pin: employee.pin ?? "",
+      pin: "",
       is_active: employee.is_active,
     });
     setIsEditOpen(true);
@@ -88,7 +88,15 @@ export function EmployeesManager({ employees, onAdd, onUpdate, onDelete }: Emplo
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected) return;
-    const ok = await onUpdate(selected.id, normalize(form));
+    const normalized = normalize(form);
+    const updatePayload: Partial<CreateEmployeeData> = { ...normalized };
+
+    // Keep existing PIN unless user explicitly enters a replacement value.
+    if (!form.pin?.trim()) {
+      delete updatePayload.pin;
+    }
+
+    const ok = await onUpdate(selected.id, updatePayload);
     if (ok) {
       setIsEditOpen(false);
       setSelected(null);
@@ -158,7 +166,7 @@ export function EmployeesManager({ employees, onAdd, onUpdate, onDelete }: Emplo
             id={`${idPrefix}-pin`}
             value={form.pin ?? ""}
             onChange={(e) => setForm({ ...form, pin: e.target.value })}
-            placeholder="Optional, for Time Clock"
+            placeholder={idPrefix === "edit" ? "Leave blank to keep current PIN" : "Optional, for Time Clock"}
             inputMode="numeric"
           />
         </div>
@@ -232,7 +240,7 @@ export function EmployeesManager({ employees, onAdd, onUpdate, onDelete }: Emplo
                     <TableCell className="text-right">
                       {formatCurrency(employee.hourly_rate)}
                     </TableCell>
-                    <TableCell>{employee.pin ? "••••" : "-"}</TableCell>
+                    <TableCell>{employee.has_pin ? "••••" : "-"}</TableCell>
                     <TableCell>
                       <Badge variant={employee.is_active ? "default" : "secondary"}>
                         {employee.is_active ? "Active" : "Inactive"}

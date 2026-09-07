@@ -33,10 +33,15 @@ export type ReceivablesQuery = {
   search: string;
   sortBy: "date" | "balance" | "duedate";
   status: "all" | "pending" | "partially_paid" | "paid" | "written_off";
+  startDate: string;
+  endDate: string;
 };
 
 export function useReceivables() {
   const [receivables, setReceivables] = useState<Receivable[]>([]);
+  const [kpiReceivables, setKpiReceivables] = useState<
+    Array<Pick<Receivable, "amount" | "amount_paid" | "balance" | "status" | "due_date" | "customer_name" | "date_issued">>
+  >([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState<ReceivablesQuery>({
@@ -45,6 +50,8 @@ export function useReceivables() {
     search: "",
     sortBy: "date",
     status: "all",
+    startDate: "",
+    endDate: "",
   });
 
   const loadReceivables = useCallback(async () => {
@@ -53,36 +60,61 @@ export function useReceivables() {
       const from = (query.page - 1) * query.pageSize;
       const to = from + query.pageSize - 1;
 
-      let request = supabase
+      let listRequest = supabase
         .from("receivables")
         .select("*", { count: "exact" });
 
+      let kpiRequest = supabase
+        .from("receivables")
+        .select("amount,amount_paid,balance,status,due_date,customer_name,date_issued");
+
       if (query.search) {
         const search = `%${query.search}%`;
-        request = request.ilike("customer_name", search);
+        listRequest = listRequest.ilike("customer_name", search);
+        kpiRequest = kpiRequest.ilike("customer_name", search);
       }
 
       if (query.status !== "all") {
-        request = request.eq("status", query.status);
+        listRequest = listRequest.eq("status", query.status);
+        kpiRequest = kpiRequest.eq("status", query.status);
+      }
+
+      if (query.startDate) {
+        listRequest = listRequest.gte("date_issued", query.startDate);
+        kpiRequest = kpiRequest.gte("date_issued", query.startDate);
+      }
+
+      if (query.endDate) {
+        listRequest = listRequest.lte("date_issued", query.endDate);
+        kpiRequest = kpiRequest.lte("date_issued", query.endDate);
       }
 
       switch (query.sortBy) {
         case "balance":
-          request = request.order("balance", { ascending: false });
+          listRequest = listRequest.order("balance", { ascending: false });
           break;
         case "duedate":
-          request = request.order("due_date", { ascending: true });
+          listRequest = listRequest.order("due_date", { ascending: true });
           break;
         case "date":
         default:
-          request = request.order("date_issued", { ascending: false });
+          listRequest = listRequest.order("date_issued", { ascending: false });
           break;
       }
 
-      const { data, error, count } = await request.range(from, to);
+      const [listResult, kpiResult] = await Promise.all([
+        listRequest.range(from, to),
+        kpiRequest,
+      ]);
+
+      const { data, error, count } = listResult;
+      const { data: kpiData, error: kpiError } = kpiResult;
 
       if (error) throw error;
+      if (kpiError) throw kpiError;
+
       setReceivables(data || []);
+      setKpiReceivables(kpiData || []);
       setTotalCount(count || 0);
     } catch (error) {
       console.error("Error loading receivables:", error);
@@ -160,6 +192,7 @@ export function useReceivables() {
 
   return {
     receivables,
+    kpiReceivables,
     totalCount,
     query,
     setQuery,

@@ -19,7 +19,28 @@ const Products = () => {
       const { data, error } = await supabase.functions.invoke("loyverse-sync", {
         body: {},
       });
-      if (error) throw error;
+
+      if (error) {
+        // supabase-js wraps non-2xx responses in a FunctionsHttpError whose
+        // .message is generic; the real detail is in the Response at .context.
+        let detail = error.message;
+        const context = (error as { context?: Response }).context;
+        if (context && typeof context.text === "function") {
+          try {
+            const body = await context.clone().text();
+            const parsed = JSON.parse(body);
+            if (parsed?.error) detail = parsed.error;
+          } catch {
+            /* keep generic message */
+          }
+          if (context.status === 404) {
+            detail =
+              "The loyverse-sync function isn't deployed yet. Deploy it with: supabase functions deploy loyverse-sync";
+          }
+        }
+        throw new Error(detail);
+      }
+
       if (data && data.ok === false) {
         throw new Error(data.error || "Sync failed");
       }

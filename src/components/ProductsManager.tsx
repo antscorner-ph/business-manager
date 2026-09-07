@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, Package, ImageOff } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Package, ImageOff, Eye } from "lucide-react";
 import type { Product } from "@/hooks/useProducts";
 import type { ProductsListQuery } from "@/hooks/useProductsList";
 
@@ -95,12 +96,13 @@ export function ProductsManager({
                 <TableHead>Category</TableHead>
                 <TableHead className="text-right">Price</TableHead>
                 <TableHead className="text-right">Stock</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {products.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     No products found. Use "Sync from Loyverse" to import your catalog.
                   </TableCell>
                 </TableRow>
@@ -127,6 +129,14 @@ export function ProductsManager({
                     <TableCell className="text-right">{formatCurrency(product.price)}</TableCell>
                     <TableCell className="text-right">
                       <InventoryBadge qty={product.qty} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to={`/products/${encodeURIComponent(product.sku)}`}>
+                          <Eye className="mr-1 h-4 w-4" />
+                          View
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))

@@ -191,6 +191,45 @@ export type Database = {
           },
         ]
       }
+      expenses: {
+        Row: {
+          id: string
+          expense_date: string
+          description: string
+          category: string
+          payment_method: string
+          status: string
+          amount: number
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          expense_date?: string
+          description: string
+          category: string
+          payment_method: string
+          status?: string
+          amount: number
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          expense_date?: string
+          description?: string
+          category?: string
+          payment_method?: string
+          status?: string
+          amount?: number
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -468,6 +507,7 @@ export type Database = {
           price: number | null
           qty: number | null
           image: string | null
+          low_stock: number | null
         }
         Insert: {
           sku: string
@@ -477,6 +517,7 @@ export type Database = {
           price?: number | null
           qty?: number | null
           image?: string | null
+          low_stock?: number | null
         }
         Update: {
           sku?: string
@@ -486,6 +527,7 @@ export type Database = {
           price?: number | null
           qty?: number | null
           image?: string | null
+          low_stock?: number | null
         }
         Relationships: []
       }

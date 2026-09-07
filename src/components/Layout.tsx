@@ -3,13 +3,21 @@ import {
   LayoutDashboard,
   Calculator,
   ShoppingCart,
-  FilePlus2,
   Landmark,
   History as HistoryIcon,
+  BarChart3,
+  FileBarChart,
+  Scale,
   HandCoins,
+  ReceiptText,
   Contact,
   Truck,
   Package,
+  Clock,
+  CalendarClock,
+  UsersRound,
+  Shield,
+  CreditCard,
   LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -54,16 +62,17 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Daily Operations",
     items: [
       { title: "Dashboard", path: "/", icon: LayoutDashboard },
-      { title: "Daily Sales", path: "/reconciliation", icon: Calculator },
+      { title: "Daily Reconciliation", path: "/reconciliation", icon: Calculator },
       { title: "Bank Deposits", path: "/bank-deposits", icon: Landmark },
+      { title: "Purchase Orders", path: "/purchase-orders", icon: ShoppingCart },
     ],
   },
   {
     label: "Money Tracking",
     items: [
       { title: "Receivables", path: "/receivables", icon: HandCoins },
-      { title: "Purchase Orders", path: "/purchase-orders", icon: ShoppingCart },
-      { title: "Generate PO", path: "/purchase-orders/new", icon: FilePlus2 },
+      { title: "Payables", path: "/payables", icon: CreditCard },
+      { title: "Expenses", path: "/expenses", icon: ReceiptText },
     ],
   },
   {
@@ -75,8 +84,27 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "Time Keeping",
+    items: [
+      { title: "Time Clock", path: "/time-clock", icon: Clock },
+      { title: "Timesheets", path: "/timesheets", icon: CalendarClock },
+      { title: "Employees", path: "/employees", icon: UsersRound },
+    ],
+  },
+  {
     label: "Records",
-    items: [{ title: "Sales History", path: "/history", icon: HistoryIcon }],
+    items: [
+      { title: "Sales History", path: "/history", icon: HistoryIcon },
+      { title: "Cash Flow", path: "/cash-flow", icon: BarChart3 },
+      { title: "Profit and Loss", path: "/profit-loss", icon: FileBarChart },
+      { title: "Balance Sheet", path: "/balance-sheet", icon: Scale },
+    ],
+  },
+  {
+    label: "Admin",
+    items: [
+      { title: "User Roles", path: "/admin/user-roles", icon: Shield },
+    ],
   },
 ];
 

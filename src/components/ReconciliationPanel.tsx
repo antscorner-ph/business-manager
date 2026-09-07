@@ -30,6 +30,7 @@ export function ReconciliationPanel({
   variance: savedVariance,
 }: ReconciliationPanelProps) {
   const [actualCash, setActualCash] = useState<string>("");
+  const [openingDraft, setOpeningDraft] = useState<string>("");
   const [isReconciled, setIsReconciled] = useState(false);
 
   // Initialize from saved values
@@ -39,6 +40,10 @@ export function ReconciliationPanel({
       setIsReconciled(savedStatus !== "pending");
     }
   }, [savedActualCash, savedStatus]);
+
+  useEffect(() => {
+    setOpeningDraft(openingBalance.toString());
+  }, [openingBalance]);
 
   const expectedBalance = openingBalance + totalCashIn - totalCashOut;
   const actualBalance = parseFloat(actualCash) || 0;
@@ -67,6 +72,16 @@ export function ReconciliationPanel({
     }
   };
 
+  const openingDraftValue = openingDraft === "" ? null : Number(openingDraft);
+  const isOpeningDraftValid = openingDraft === "" || Number.isFinite(openingDraftValue);
+  const hasOpeningChanged = openingDraft !== "" && Number(openingDraft) !== openingBalance;
+
+  const handleSaveOpeningBalance = () => {
+    if (!isOpeningDraftValid || openingDraft === "") return;
+    onOpeningBalanceChange(Number(openingDraft));
+    setIsReconciled(false);
+  };
+
   return (
     <Card className="border-2">
       <CardHeader className="pb-4">
@@ -91,17 +106,26 @@ export function ReconciliationPanel({
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="opening">Opening Balance (₱)</Label>
-          <Input
-            id="opening"
-            type="number"
-            step="0.01"
-            value={openingBalance || ""}
-            onChange={(e) => {
-              onOpeningBalanceChange(parseFloat(e.target.value) || 0);
-              setIsReconciled(false);
-            }}
-            placeholder="0.00"
-          />
+          <div className="flex gap-2">
+            <Input
+              id="opening"
+              type="number"
+              step="0.01"
+              value={openingDraft}
+              onChange={(e) => {
+                setOpeningDraft(e.target.value);
+              }}
+              placeholder="0.00"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSaveOpeningBalance}
+              disabled={!isOpeningDraftValid || !hasOpeningChanged}
+            >
+              Save
+            </Button>
+          </div>
         </div>
 
         <Separator />
