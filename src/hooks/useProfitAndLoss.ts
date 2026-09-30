@@ -1,21 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { format, startOfMonth, subMonths } from "date-fns";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-type TransactionRow = {
-  created_at: string;
-  type: string;
-  category: string;
-  amount: number;
-};
-
-type ExpenseRow = {
-  expense_date: string;
-  category: string;
-  amount: number;
-  status: string;
-};
+import {
+  buildMonthWindow,
+  computeProfitAndLoss,
+  type PLExpense,
+  type PLTransaction,
+} from "@/lib/financeMath";
 
 export type ProfitLossMonth = {
   key: string;
@@ -37,33 +29,11 @@ export type ProfitLossReport = {
   netIncome: ProfitLossRow;
 };
 
-const toMonthKey = (dateValue: string) => format(new Date(dateValue), "yyyy-MM");
-
-const makeRow = (
+const toRow = (
   label: string,
-  monthKeys: string[],
+  values: Record<string, number>,
   rowType: "data" | "section" = "data"
-): ProfitLossRow => ({
-  label,
-  rowType,
-  values: monthKeys.reduce((acc, key) => {
-    acc[key] = 0;
-    return acc;
-  }, {} as Record<string, number>),
-});
-
-const EXPENSE_LABEL_MAP: Record<string, string> = {
-  Salaries: "Salaries and Wages Expense",
-  "Store Renovation": "Renovation Expense",
-  "Operating Expense": "Operating Expenses",
-  Utilities: "Utilities Expense",
-  "Rental Expense": "Rent Expense",
-  "Inventory Write-Off": "Inventory Write-Down / Write-Off",
-  "Office Supply": "Office Supplies Expense",
-  Marketing: "Marketing Expense",
-  Transportation: "Transportation Expense",
-  Other: "Other Expenses",
-};
+): ProfitLossRow => ({ label, values, rowType });
 
 export function useProfitAndLoss() {
   const [monthsToShow, setMonthsToShow] = useState<6 | 12>(6);
@@ -74,17 +44,10 @@ export function useProfitAndLoss() {
     setLoading(true);
 
     try {
-      const monthStarts = Array.from({ length: monthsToShow }, (_, i) =>
-        startOfMonth(subMonths(new Date(), monthsToShow - 1 - i))
-      );
-
-      const months = monthStarts.map((monthDate) => ({
-        key: format(monthDate, "yyyy-MM"),
-        label: format(monthDate, "MMM (yyyy)"),
-      }));
-
-      const monthKeys = months.map((m) => m.key);
-      const fromDate = format(monthStarts[0], "yyyy-MM-dd");
+      const window = buildMonthWindow(monthsToShow);
+      const months = window.map((m) => ({ key: m.key, label: m.label }));
+      const monthKeys = window.map((m) => m.key);
+      const fromDate = `${monthKeys[0]}-01`;
 
       const [transactionsResult, expensesResult] = await Promise.all([
         supabase
@@ -101,74 +64,45 @@ export function useProfitAndLoss() {
       if (transactionsResult.error) throw transactionsResult.error;
       if (expensesResult.error) throw expensesResult.error;
 
-      const transactions = (transactionsResult.data || []) as TransactionRow[];
-      const expenses = (expensesResult.data || []) as ExpenseRow[];
+      const transactions = (transactionsResult.data || []) as PLTransaction[];
+      const expenses = (expensesResult.data || []) as PLExpense[];
 
-      const salesRevenueRow = makeRow("Sales Revenue", monthKeys);
-      const otherIncomeRow = makeRow("Other Income", monthKeys);
-      const totalRevenue = makeRow("Total Revenue", monthKeys);
+      const computed = computeProfitAndLoss(monthKeys, transactions, expenses);
 
-      const personnelSection = makeRow("Personnel Expenses", monthKeys, "section");
-      const operationsSection = makeRow("Other Operational Expenses", monthKeys, "section");
-      const expenseByLabel: Record<string, ProfitLossRow> = {};
-      const totalExpenses = makeRow("Total Expenses", monthKeys);
-      const netIncome = makeRow("Net Income (Loss)", monthKeys);
+      const salesRevenueRow = toRow("Sales Revenue", computed.salesRevenue);
+      const otherIncomeRow = toRow("Other Income", computed.otherIncome);
 
-      for (const tx of transactions) {
-        if (tx.type !== "cash_in") continue;
+      const personnelSection = toRow(
+        "Personnel Expenses",
+        monthKeys.reduce((acc, k) => ({ ...acc, [k]: 0 }), {}),
+        "section"
+      );
+      const operationsSection = toRow(
+        "Other Operational Expenses",
+        monthKeys.reduce((acc, k) => ({ ...acc, [k]: 0 }), {}),
+        "section"
+      );
 
-        const monthKey = toMonthKey(tx.created_at);
-        if (!monthKeys.includes(monthKey)) continue;
+      const labelRows = Object.entries(computed.expenseByLabel).map(([label, values]) =>
+        toRow(label, values)
+      );
 
-        const amount = Number(tx.amount || 0);
-
-        if (tx.category === "Sales") {
-          salesRevenueRow.values[monthKey] += amount;
-        } else {
-          otherIncomeRow.values[monthKey] += amount;
-        }
-      }
-
-      for (const expense of expenses) {
-        const monthKey = toMonthKey(expense.expense_date);
-        if (!monthKeys.includes(monthKey)) continue;
-
-        const label = EXPENSE_LABEL_MAP[expense.category] || expense.category || "Other Expenses";
-        if (!expenseByLabel[label]) {
-          expenseByLabel[label] = makeRow(label, monthKeys);
-        }
-
-        expenseByLabel[label].values[monthKey] += Number(expense.amount || 0);
-      }
-
-      const personnelRows = Object.values(expenseByLabel)
+      const personnelRows = labelRows
         .filter((row) => row.label === "Salaries and Wages Expense")
         .sort((a, b) => a.label.localeCompare(b.label));
-
-      const operationalRows = Object.values(expenseByLabel)
+      const operationalRows = labelRows
         .filter((row) => row.label !== "Salaries and Wages Expense")
         .sort((a, b) => a.label.localeCompare(b.label));
 
       const expenseRows = [personnelSection, ...personnelRows, operationsSection, ...operationalRows];
 
-      for (const monthKey of monthKeys) {
-        totalRevenue.values[monthKey] =
-          salesRevenueRow.values[monthKey] + otherIncomeRow.values[monthKey];
-
-        totalExpenses.values[monthKey] = expenseRows
-          .filter((row) => row.rowType !== "section")
-          .reduce((sum, row) => sum + Number(row.values[monthKey] || 0), 0);
-
-        netIncome.values[monthKey] = totalRevenue.values[monthKey] - totalExpenses.values[monthKey];
-      }
-
       setReport({
         months,
         revenueRows: [salesRevenueRow, otherIncomeRow],
         expenseRows,
-        totalRevenue,
-        totalExpenses,
-        netIncome,
+        totalRevenue: toRow("Total Revenue", computed.totalRevenue),
+        totalExpenses: toRow("Total Expenses", computed.totalExpenses),
+        netIncome: toRow("Net Income (Loss)", computed.netIncome),
       });
     } catch (error) {
       console.error("Error loading profit and loss:", error);

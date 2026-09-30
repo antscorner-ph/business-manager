@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedSupabase } from "@/integrations/supabase/untyped";
 import { toast } from "@/hooks/use-toast";
+import { remainingPayableBalance } from "@/lib/financeMath";
 
 export type PayableSource = "purchase_order" | "expense";
 export type PayableStatus = "unpaid" | "partial";
@@ -12,7 +14,12 @@ export interface PayableRecord {
   reference: string;
   payee: string;
   description: string;
+  /** Outstanding balance (total minus payments recorded so far). */
   amount: number;
+  /** Original obligation total. */
+  totalAmount: number;
+  /** Cumulative amount paid across recorded payments. */
+  amountPaid: number;
   status: PayableStatus;
   notes: string | null;
 }
@@ -61,34 +68,64 @@ export function usePayables() {
         expenseRequest = expenseRequest.lte("expense_date", query.endDate);
       }
 
-      const [poResult, expenseResult] = await Promise.all([poRequest, expenseRequest]);
+      const [poResult, expenseResult, paymentsResult] = await Promise.all([
+        poRequest,
+        expenseRequest,
+        untypedSupabase
+          .from("payable_payments")
+          .select("source_type,source_id,amount"),
+      ]);
 
       if (poResult.error) throw poResult.error;
       if (expenseResult.error) throw expenseResult.error;
+      if (paymentsResult.error) throw paymentsResult.error;
 
-      const purchaseOrderRows: PayableRecord[] = (poResult.data || []).map((po) => ({
-        id: po.id,
-        source: "purchase_order",
-        date: po.date,
-        reference: po.voucher_no,
-        payee: po.supplier_name,
-        description: "Purchase order",
-        amount: Number(po.total_amount || 0),
-        status: po.payment_status === "partial" ? "partial" : "unpaid",
-        notes: po.partial_payment_notes,
-      }));
+      // Aggregate payments by "source_type:source_id".
+      const paidByKey = new Map<string, number>();
+      for (const payment of (paymentsResult.data || []) as Array<{
+        source_type: string;
+        source_id: string;
+        amount: number;
+      }>) {
+        const key = `${payment.source_type}:${payment.source_id}`;
+        paidByKey.set(key, (paidByKey.get(key) || 0) + Number(payment.amount || 0));
+      }
 
-      const expenseRows: PayableRecord[] = (expenseResult.data || []).map((expense) => ({
-        id: expense.id,
-        source: "expense",
-        date: expense.expense_date,
-        reference: `EXP-${expense.id.slice(0, 8).toUpperCase()}`,
-        payee: expense.category || "Operating Expense",
-        description: expense.description || "Expense",
-        amount: Number(expense.amount || 0),
-        status: expense.status === "partially_paid" ? "partial" : "unpaid",
-        notes: expense.notes,
-      }));
+      const purchaseOrderRows: PayableRecord[] = (poResult.data || []).map((po) => {
+        const total = Number(po.total_amount || 0);
+        const paid = paidByKey.get(`purchase_order:${po.id}`) || 0;
+        return {
+          id: po.id,
+          source: "purchase_order",
+          date: po.date,
+          reference: po.voucher_no,
+          payee: po.supplier_name,
+          description: "Purchase order",
+          amount: remainingPayableBalance(total, paid),
+          totalAmount: total,
+          amountPaid: paid,
+          status: po.payment_status === "partial" ? "partial" : "unpaid",
+          notes: po.partial_payment_notes,
+        };
+      });
+
+      const expenseRows: PayableRecord[] = (expenseResult.data || []).map((expense) => {
+        const total = Number(expense.amount || 0);
+        const paid = paidByKey.get(`expense:${expense.id}`) || 0;
+        return {
+          id: expense.id,
+          source: "expense",
+          date: expense.expense_date,
+          reference: `EXP-${expense.id.slice(0, 8).toUpperCase()}`,
+          payee: expense.category || "Operating Expense",
+          description: expense.description || "Expense",
+          amount: remainingPayableBalance(total, paid),
+          totalAmount: total,
+          amountPaid: paid,
+          status: expense.status === "partially_paid" ? "partial" : "unpaid",
+          notes: expense.notes,
+        };
+      });
 
       let rows = [...purchaseOrderRows, ...expenseRows];
 

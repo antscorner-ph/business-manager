@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedSupabase } from "@/integrations/supabase/untyped";
 import { toast } from "sonner";
 
 export type AppRole = "owner" | "manager" | "staff";
@@ -27,7 +28,7 @@ export function useUserRoles() {
 
       setCurrentUserId(user?.id ?? null);
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await untypedSupabase
         .from("user_roles")
         .select("id,user_id,role,created_at,updated_at")
         .order("created_at", { ascending: true });
@@ -57,7 +58,7 @@ export function useUserRoles() {
 
   const upsertRole = async (userId: string, role: AppRole) => {
     try {
-      const { error } = await (supabase as any)
+      const { error } = await untypedSupabase
         .from("user_roles")
         .upsert({ user_id: userId, role }, { onConflict: "user_id" });
 
@@ -75,7 +76,7 @@ export function useUserRoles() {
 
   const deleteRole = async (id: number) => {
     try {
-      const { error } = await (supabase as any).from("user_roles").delete().eq("id", id);
+      const { error } = await untypedSupabase.from("user_roles").delete().eq("id", id);
       if (error) throw error;
 
       toast.success("Role removed");

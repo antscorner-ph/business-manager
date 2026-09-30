@@ -34,9 +34,10 @@ export function useReconciliation() {
 
   const today = format(new Date(), "yyyy-MM-dd");
 
-  // Load or create today's reconciliation
+  // Load or create today's reconciliation (run once on mount).
   useEffect(() => {
     loadTodayReconciliation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadTodayReconciliation = async () => {

@@ -21,6 +21,7 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { useTimeEntries, entryHours, type TimeEntry } from "@/hooks/useTimeEntries";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedSupabase } from "@/integrations/supabase/untyped";
 import type { Employee } from "@/hooks/useEmployees";
 
 const TimeClock = () => {
@@ -66,7 +67,7 @@ const TimeClock = () => {
   const confirmPin = async () => {
     if (!pinEmployee) return;
 
-    const { data: isValid, error } = await (supabase as any).rpc("verify_employee_pin", {
+    const { data: isValid, error } = await untypedSupabase.rpc("verify_employee_pin", {
       p_employee_id: pinEmployee.id,
       p_pin: pinInput,
     });

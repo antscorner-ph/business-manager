@@ -131,6 +131,9 @@ export function KpiDateRangeFilter({ value, onChange, className }: Props) {
 
   useEffect(() => {
     setPreset(inferPresetFromValue(value));
+    // Intentionally keyed on the primitive date fields, not the `value` object
+    // identity, to avoid re-running on every parent re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value.startDate, value.endDate]);
 
   const calendarValue = useMemo<DateRange | undefined>(() => {

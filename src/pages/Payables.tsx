@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, CreditCard, ExternalLink, Search, ShoppingCart, Wallet } from "lucide-react";
 import { KpiDateRangeFilter } from "@/components/KpiDateRangeFilter";
@@ -5,7 +6,8 @@ import { SummaryCard } from "@/components/SummaryCard";
 import { PageContainer } from "@/components/PageContainer";
 import { PageHeader } from "@/components/PageHeader";
 import { PageLoader } from "@/components/PageLoader";
-import { usePayables } from "@/hooks/usePayables";
+import { usePayables, type PayableRecord } from "@/hooks/usePayables";
+import { RecordPayablePaymentDialog } from "@/components/RecordPayablePaymentDialog";
 import { STATUS_TAG_CLASSES, formatTagLabel, getTagClass } from "@/lib/tagStyles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,7 +47,14 @@ const sourceRoute: Record<string, string> = {
 };
 
 const Payables = () => {
-  const { payables, query, setQuery, loading } = usePayables();
+  const { payables, query, setQuery, loading, reload } = usePayables();
+  const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const [selectedPayable, setSelectedPayable] = useState<PayableRecord | null>(null);
+
+  const openPayDialog = (payable: PayableRecord) => {
+    setSelectedPayable(payable);
+    setPayDialogOpen(true);
+  };
 
   const setDateRange = (startDate: string, endDate: string) => {
     setQuery({ ...query, startDate, endDate });
@@ -173,12 +182,17 @@ const Payables = () => {
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(item.amount)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={sourceRoute[item.source]}>
-                            Open
-                            <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                          </Link>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="default" size="sm" onClick={() => openPayDialog(item)}>
+                            Pay
+                          </Button>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={sourceRoute[item.source]}>
+                              Open
+                              <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -188,6 +202,13 @@ const Payables = () => {
           </div>
         </CardContent>
       </Card>
+
+      <RecordPayablePaymentDialog
+        payable={selectedPayable}
+        open={payDialogOpen}
+        onOpenChange={setPayDialogOpen}
+        onRecorded={reload}
+      />
     </PageContainer>
   );
 };

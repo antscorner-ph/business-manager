@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedSupabase } from "@/integrations/supabase/untyped";
 import { toast } from "@/hooks/use-toast";
 
 export interface Employee {
@@ -21,6 +22,18 @@ export interface CreateEmployeeData {
   is_active?: boolean;
 }
 
+/** Shape returned by the employees select (includes `pin_hash`, absent from generated types). */
+interface EmployeeRow {
+  id: string;
+  name: string;
+  role: string | null;
+  hourly_rate: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  pin_hash: string | null;
+}
+
 /**
  * Manage the local employee list used for time-keeping.
  * By default only active employees are returned; pass includeInactive for management views.
@@ -32,7 +45,7 @@ export const useEmployees = (includeInactive = false) => {
   const fetchEmployees = useCallback(async () => {
     setLoading(true);
     try {
-      let request = (supabase as any)
+      let request = untypedSupabase
         .from("employees")
         .select("id,name,role,hourly_rate,is_active,created_at,updated_at,pin_hash")
         .order("name", { ascending: true });
@@ -42,7 +55,7 @@ export const useEmployees = (includeInactive = false) => {
       const { data, error } = await request;
       if (error) throw error;
 
-      const mapped: Employee[] = (data || []).map((row: any) => ({
+      const mapped: Employee[] = ((data || []) as EmployeeRow[]).map((row) => ({
         id: row.id,
         name: row.name,
         role: row.role,
@@ -99,7 +112,7 @@ export const useEmployees = (includeInactive = false) => {
         pin: null,
       };
 
-      const { data: inserted, error } = await (supabase as any)
+      const { data: inserted, error } = await untypedSupabase
         .from("employees")
         .insert([payload])
         .select("id")
@@ -108,7 +121,7 @@ export const useEmployees = (includeInactive = false) => {
       if (error) throw error;
 
       if (pin) {
-        const { error: pinError } = await (supabase as any).rpc("set_employee_pin", {
+        const { error: pinError } = await untypedSupabase.rpc("set_employee_pin", {
           p_employee_id: inserted.id,
           p_pin: pin,
         });
@@ -140,7 +153,7 @@ export const useEmployees = (includeInactive = false) => {
       if (error) throw error;
 
       if (pinProvided) {
-        const { error: pinError } = await (supabase as any).rpc("set_employee_pin", {
+        const { error: pinError } = await untypedSupabase.rpc("set_employee_pin", {
           p_employee_id: id,
           p_pin: pin,
         });

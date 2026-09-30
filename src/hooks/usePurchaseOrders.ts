@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedSupabase } from "@/integrations/supabase/untyped";
 import { useToast } from "@/hooks/use-toast";
 import { computeLineTotal, type DraftLineItem } from "@/hooks/usePurchaseOrderItems";
 
@@ -301,7 +302,7 @@ export const usePurchaseOrders = () => {
         0
       );
 
-      const { data: purchaseOrderId, error } = await (supabase as any).rpc(
+      const { data: purchaseOrderId, error } = await untypedSupabase.rpc(
         "create_purchase_order_with_items",
         {
           p_header: {
