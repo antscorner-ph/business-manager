@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { Wallet, TrendingUp, TrendingDown, Calculator, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SummaryCard } from "@/components/SummaryCard";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
@@ -10,9 +11,11 @@ import { PageContainer } from "@/components/PageContainer";
 import { PageHeader } from "@/components/PageHeader";
 import { PageLoader } from "@/components/PageLoader";
 import { useReconciliation } from "@/hooks/useReconciliation";
+import { getSelectedReconciliationDate } from "@/lib/reconciliationDates";
 import { useState } from "react";
 
 const DailyReconciliation = () => {
+  const [selectedDate, setSelectedDate] = useState(() => getSelectedReconciliationDate());
   const {
     reconciliation,
     transactions,
@@ -21,7 +24,7 @@ const DailyReconciliation = () => {
     deleteTransaction,
     updateOpeningBalance,
     reconcile,
-  } = useReconciliation();
+  } = useReconciliation(selectedDate);
 
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -29,6 +32,7 @@ const DailyReconciliation = () => {
   const totalCashOut = reconciliation?.total_cash_out || 0;
   const expectedBalance = reconciliation?.expected_balance || 0;
   const openingBalance = reconciliation?.opening_balance || 0;
+  const formattedSelectedDate = format(new Date(`${selectedDate}T12:00:00`), "EEEE, MMMM d, yyyy");
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PH", {
@@ -54,8 +58,8 @@ const DailyReconciliation = () => {
   return (
     <PageContainer>
       <PageHeader
-        title="Daily Sales"
-        description={format(new Date(), "EEEE, MMMM d, yyyy")}
+        title="Transactions"
+        description={formattedSelectedDate}
         actions={
           <>
             <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2">
@@ -63,6 +67,18 @@ const DailyReconciliation = () => {
               <span className="font-semibold text-primary">
                 {transactions.length} transactions
               </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="transaction-date" className="sr-only">
+                Select transaction date
+              </label>
+              <Input
+                id="transaction-date"
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(getSelectedReconciliationDate(event.target.value))}
+                className="w-[170px]"
+              />
             </div>
             <Button variant="outline" onClick={() => setReportOpen(true)}>
               <FileText className="h-4 w-4 mr-2" />

@@ -52,8 +52,8 @@ export function useProfitAndLoss() {
       const [transactionsResult, expensesResult] = await Promise.all([
         supabase
           .from("transactions")
-          .select("created_at,type,category,amount")
-          .gte("created_at", fromDate),
+          .select("transaction_date,created_at,type,category,amount")
+          .gte("transaction_date", fromDate),
         supabase
           .from("expenses")
           .select("expense_date,category,amount,status")

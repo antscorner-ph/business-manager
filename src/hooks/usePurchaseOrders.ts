@@ -85,9 +85,10 @@ export const usePurchaseOrders = () => {
         .from("purchase_orders")
         .select("total_amount,payment_status,status,date,delivered_date,supplier_name");
 
-      if (query.search) {
-        const search = `%${query.search}%`;
-        const filter = `voucher_no.ilike.${search},supplier_name.ilike.${search}`;
+      if (query.search.trim()) {
+        const searchTerm = query.search.trim();
+        const searchPattern = `%${searchTerm}%`;
+        const filter = `voucher_no.ilike.${searchPattern},supplier_name.ilike.${searchPattern}`;
         listRequest = listRequest.or(filter);
         kpiRequest = kpiRequest.or(filter);
       }

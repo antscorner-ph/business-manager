@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { Plus, X, DollarSign, Calendar, User, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Plus, X, DollarSign, Calendar, User, ChevronLeft, ChevronRight, Search, Pencil, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +39,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ReceivablesQuery } from "@/hooks/useReceivables";
 import { STATUS_TAG_CLASSES, formatTagLabel, getTagClass } from "@/lib/tagStyles";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 export interface Receivable {
   id: string;
@@ -68,8 +69,10 @@ interface ReceivablesManagerProps {
   query: ReceivablesQuery;
   onQueryChange: (query: ReceivablesQuery) => void;
   onAddReceivable: (receivable: Omit<Receivable, "id" | "status" | "amount_paid" | "balance">) => Promise<void>;
+  onUpdateReceivable: (id: string, updates: Partial<Omit<Receivable, "id" | "status" | "amount_paid" | "balance" | "created_at" | "updated_at">>) => Promise<void>;
   onAddPayment: (payment: Omit<ReceivablePayment, "id">) => Promise<void>;
   onUpdateStatus: (id: string, status: string) => Promise<void>;
+  loading?: boolean;
 }
 
 export function ReceivablesManager({
@@ -78,10 +81,13 @@ export function ReceivablesManager({
   query,
   onQueryChange,
   onAddReceivable,
+  onUpdateReceivable,
   onAddPayment,
   onUpdateStatus,
+  loading = false,
 }: ReceivablesManagerProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedReceivable, setSelectedReceivable] = useState<Receivable | null>(null);
 
@@ -93,12 +99,31 @@ export function ReceivablesManager({
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
 
+  // Form states for editing receivable
+  const [editCustomerName, setEditCustomerName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editDateIssued, setEditDateIssued] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+
   // Form states for adding payment
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentNotes, setPaymentNotes] = useState("");
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState(query.search);
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
+
+  useEffect(() => {
+    setSearchInput(query.search);
+  }, [query.search]);
+
+  useEffect(() => {
+    if (debouncedSearch === query.search) return;
+    onQueryChange({ ...query, search: debouncedSearch, page: 1 });
+  }, [debouncedSearch, query, onQueryChange]);
 
   // Pagination logic
   const totalPages = Math.ceil(totalCount / query.pageSize);
@@ -131,6 +156,29 @@ export function ReceivablesManager({
     setDueDate("");
     setNotes("");
     setAddDialogOpen(false);
+  };
+
+  const handleEditReceivable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedReceivable || !editCustomerName || !editAmount) return;
+
+    await onUpdateReceivable(selectedReceivable.id, {
+      customer_name: editCustomerName,
+      description: editDescription || null,
+      amount: Number(editAmount),
+      date_issued: editDateIssued,
+      due_date: editDueDate || null,
+      notes: editNotes || null,
+    });
+
+    setEditCustomerName("");
+    setEditDescription("");
+    setEditAmount("");
+    setEditDateIssued(format(new Date(), "yyyy-MM-dd"));
+    setEditDueDate("");
+    setEditNotes("");
+    setEditDialogOpen(false);
+    setSelectedReceivable(null);
   };
 
   const handleAddPayment = async (e: React.FormEvent) => {
@@ -288,12 +336,13 @@ export function ReceivablesManager({
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search customer name..."
-                  value={query.search}
-                  onChange={(e) => {
-                    onQueryChange({ ...query, search: e.target.value, page: 1 });
-                  }}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className="flex-1"
                 />
+                {loading && (
+                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                )}
               </div>
               <Select value={query.sortBy} onValueChange={(value: ReceivablesQuery["sortBy"]) => onQueryChange({ ...query, sortBy: value, page: 1 })}>
                 <SelectTrigger>
@@ -349,7 +398,16 @@ export function ReceivablesManager({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {receivables.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading receivables...
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : receivables.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     No receivables recorded yet
@@ -374,24 +432,43 @@ export function ReceivablesManager({
                     </TableCell>
                     <TableCell>{getStatusBadge(receivable.status)}</TableCell>
                     <TableCell className="text-right">
-                      {receivable.status !== "paid" && receivable.status !== "written_off" && (
+                      <div className="flex justify-end gap-2">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => {
                             setSelectedReceivable(receivable);
-                            setPaymentAmount("");
-                            setPaymentDate(format(new Date(), "yyyy-MM-dd"));
-                            setPaymentMethod("cash");
-                            setPaymentNotes("");
-                            setPaymentError(null);
-                            setPaymentDialogOpen(true);
+                            setEditCustomerName(receivable.customer_name);
+                            setEditDescription(receivable.description || "");
+                            setEditAmount(String(receivable.amount));
+                            setEditDateIssued(receivable.date_issued || format(new Date(), "yyyy-MM-dd"));
+                            setEditDueDate(receivable.due_date || "");
+                            setEditNotes(receivable.notes || "");
+                            setEditDialogOpen(true);
                           }}
                         >
-                          <DollarSign className="h-3 w-3 mr-1" />
-                          Payment
+                          <Pencil className="h-3 w-3 mr-1" />
+                          Edit
                         </Button>
-                      )}
+                        {receivable.status !== "paid" && receivable.status !== "written_off" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedReceivable(receivable);
+                              setPaymentAmount("");
+                              setPaymentDate(format(new Date(), "yyyy-MM-dd"));
+                              setPaymentMethod("cash");
+                              setPaymentNotes("");
+                              setPaymentError(null);
+                              setPaymentDialogOpen(true);
+                            }}
+                          >
+                            <DollarSign className="h-3 w-3 mr-1" />
+                            Payment
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -430,6 +507,92 @@ export function ReceivablesManager({
             </div>
           </div>
         )}
+
+        {/* Edit Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-md">
+            <form onSubmit={handleEditReceivable}>
+              <DialogHeader>
+                <DialogTitle>Edit Receivable</DialogTitle>
+                <DialogDescription>
+                  Update the selected receivable details.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editCustomerName">Customer Name *</Label>
+                  <Input
+                    id="editCustomerName"
+                    value={editCustomerName}
+                    onChange={(e) => setEditCustomerName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editAmount">Amount *</Label>
+                  <Input
+                    id="editAmount"
+                    type="number"
+                    step="0.01"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editDescription">Description</Label>
+                  <Input
+                    id="editDescription"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editDateIssued">Date Issued</Label>
+                    <Input
+                      id="editDateIssued"
+                      type="date"
+                      value={editDateIssued}
+                      onChange={(e) => setEditDateIssued(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editDueDate">Due Date</Label>
+                    <Input
+                      id="editDueDate"
+                      type="date"
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editNotes">Notes</Label>
+                  <Textarea
+                    id="editNotes"
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditDialogOpen(false);
+                    setSelectedReceivable(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* Payment Dialog */}
         <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>

@@ -17,7 +17,7 @@ const BankDeposits = () => {
     updateStatus,
   } = useBankDeposits();
 
-  if (loading) {
+  if (loading && deposits.length === 0) {
     return <PageLoader />;
   }
 

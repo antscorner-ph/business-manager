@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -34,8 +34,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, Pencil, Trash2, Search } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, Search, Loader2 } from "lucide-react";
 import { Customer, CreateCustomerData, CustomersQuery } from "@/hooks/useCustomers";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface CustomersManagerProps {
   customers: Customer[];
@@ -45,6 +46,7 @@ interface CustomersManagerProps {
   onAddCustomer: (data: CreateCustomerData) => Promise<void>;
   onUpdateCustomer: (id: string, data: Partial<CreateCustomerData>) => Promise<void>;
   onDeleteCustomer: (id: string) => Promise<void>;
+  loading?: boolean;
 }
 
 export const CustomersManager = ({
@@ -55,6 +57,7 @@ export const CustomersManager = ({
   onAddCustomer,
   onUpdateCustomer,
   onDeleteCustomer,
+  loading = false,
 }: CustomersManagerProps) => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -69,6 +72,17 @@ export const CustomersManager = ({
     contact_person: "",
     notes: "",
   });
+  const [searchInput, setSearchInput] = useState(query.search);
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
+
+  useEffect(() => {
+    setSearchInput(query.search);
+  }, [query.search]);
+
+  useEffect(() => {
+    if (debouncedSearch === query.search) return;
+    onQueryChange({ ...query, search: debouncedSearch, page: 1 });
+  }, [debouncedSearch, query, onQueryChange]);
 
   const handleAddCustomer = async () => {
     if (!formData.name.trim()) {
@@ -207,16 +221,17 @@ export const CustomersManager = ({
         </Dialog>
             </div>
             <div className="grid gap-4 md:grid-cols-4">
-              <div className="flex items-center gap-2">
+              <div className="relative flex items-center gap-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, email, or phone..."
-                  value={query.search}
-                  onChange={(e) =>
-                    onQueryChange({ ...query, search: e.target.value, page: 1 })
-                  }
-                  className="flex-1"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="flex-1 pr-9"
                 />
+                {loading && (
+                  <Loader2 className="absolute right-3 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
               </div>
               <Select value={query.sortBy} onValueChange={(value: "name" | "date") =>
                 onQueryChange({ ...query, sortBy: value })

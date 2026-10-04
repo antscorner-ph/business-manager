@@ -112,8 +112,8 @@ export function useBalanceSheet() {
           .lte("expense_date", maxEndDate),
         supabase
           .from("transactions")
-          .select("created_at,type,category,amount")
-          .lte("created_at", `${maxEndDate}T23:59:59`),
+          .select("transaction_date,created_at,type,category,amount")
+          .lte("transaction_date", maxEndDate),
         supabase.from("products").select("sku,qty,price"),
       ]);
 

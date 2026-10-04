@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -18,15 +19,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, Package, ImageOff, Eye } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Package, ImageOff, Eye, Loader2 } from "lucide-react";
 import type { Product } from "@/hooks/useProducts";
 import type { ProductsListQuery } from "@/hooks/useProductsList";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface ProductsManagerProps {
   products: Product[];
   totalCount: number;
   query: ProductsListQuery;
   onQueryChange: (query: ProductsListQuery) => void;
+  loading?: boolean;
 }
 
 const formatCurrency = (amount: number | null) =>
@@ -46,7 +49,20 @@ export function ProductsManager({
   totalCount,
   query,
   onQueryChange,
+  loading = false,
 }: ProductsManagerProps) {
+  const [searchInput, setSearchInput] = useState(query.search);
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
+
+  useEffect(() => {
+    setSearchInput(query.search);
+  }, [query.search]);
+
+  useEffect(() => {
+    if (debouncedSearch === query.search) return;
+    onQueryChange({ ...query, search: debouncedSearch, page: 1 });
+  }, [debouncedSearch, query, onQueryChange]);
+
   const totalPages = Math.ceil(totalCount / query.pageSize) || 1;
 
   return (
@@ -62,10 +78,13 @@ export function ProductsManager({
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by name, SKU, or category..."
-                value={query.search}
-                onChange={(e) => onQueryChange({ ...query, search: e.target.value, page: 1 })}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-9"
               />
+              {loading && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              )}
             </div>
             <Select
               value={query.sortBy}
@@ -100,7 +119,16 @@ export function ProductsManager({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Searching products...
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : products.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     No products found. Use "Sync from Loyverse" to import your catalog.

@@ -71,7 +71,7 @@ const PurchaseOrders = () => {
     { unpaid: 0, partial: 0, paid: 0 }
   );
 
-  if (loading) {
+  if (loading && purchaseOrders.length === 0) {
     return <PageLoader />;
   }
 

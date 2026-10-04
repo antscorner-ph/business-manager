@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { POItemsDialog } from "@/components/POItemsDialog";
 import { STATUS_TAG_CLASSES, formatTagLabel, getTagClass } from "@/lib/tagStyles";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { formatDate } from "@/lib/utils";
 
 interface PurchaseOrdersManagerProps {
@@ -88,6 +89,17 @@ export const PurchaseOrdersManager = ({
     notes: "",
   });
   const [paymentAmount, setPaymentAmount] = useState(0);
+  const [searchInput, setSearchInput] = useState(query.search);
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
+
+  useEffect(() => {
+    setSearchInput(query.search);
+  }, [query.search]);
+
+  useEffect(() => {
+    if (debouncedSearch === query.search) return;
+    onQueryChange({ ...query, search: debouncedSearch, page: 1 });
+  }, [debouncedSearch, query, onQueryChange]);
 
   // Pagination logic
   const totalPages = Math.ceil(totalCount / query.pageSize);
@@ -203,10 +215,8 @@ export const PurchaseOrdersManager = ({
                 <Search className="h-4 w-4 text-muted-foreground" />
                    <Input
                      placeholder="Search voucher or supplier..."
-                     value={query.search}
-                     onChange={(e) => {
-                       onQueryChange({ ...query, search: e.target.value, page: 1 });
-                     }}
+                     value={searchInput}
+                     onChange={(e) => setSearchInput(e.target.value)}
                      className="flex-1"
                    />
               </div>

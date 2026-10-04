@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Plus, X, Building2, Calendar, Receipt, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { BankDepositsQuery } from "@/hooks/useBankDeposits";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 export interface BankDeposit {
   id: string;
@@ -97,6 +98,17 @@ export function BankDepositsManager({
   const [referenceDate, setReferenceDate] = useState("");
   const [amount, setAmount] = useState("");
   const [itemNotes, setItemNotes] = useState("");
+  const [searchInput, setSearchInput] = useState(query.search);
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
+
+  useEffect(() => {
+    setSearchInput(query.search);
+  }, [query.search]);
+
+  useEffect(() => {
+    if (debouncedSearch === query.search) return;
+    onQueryChange({ ...query, search: debouncedSearch, page: 1 });
+  }, [debouncedSearch, query, onQueryChange]);
 
   // Pagination logic
   const totalPages = Math.ceil(totalCount / query.pageSize);
@@ -257,10 +269,8 @@ export function BankDepositsManager({
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search bank or slip..."
-                value={query.search}
-                onChange={(e) => {
-                  onQueryChange({ ...query, search: e.target.value, page: 1 });
-                }}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="flex-1"
               />
             </div>

@@ -16,7 +16,7 @@ const Suppliers = () => {
     deleteSupplier,
   } = useSuppliers();
 
-  if (loading) {
+  if (loading && suppliers.length === 0) {
     return <PageLoader />;
   }
 

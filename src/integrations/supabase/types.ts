@@ -238,6 +238,7 @@ export type Database = {
           description: string | null
           id: string
           reconciliation_id: string | null
+          transaction_date: string | null
           type: string
         }
         Insert: {
@@ -247,6 +248,7 @@ export type Database = {
           description?: string | null
           id?: string
           reconciliation_id?: string | null
+          transaction_date?: string | null
           type: string
         }
         Update: {
@@ -256,6 +258,7 @@ export type Database = {
           description?: string | null
           id?: string
           reconciliation_id?: string | null
+          transaction_date?: string | null
           type?: string
         }
         Relationships: [

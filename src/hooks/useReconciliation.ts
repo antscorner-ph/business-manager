@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
 import { toast } from "sonner";
+import { getSelectedReconciliationDate } from "@/lib/reconciliationDates";
+import { getTransactionDate } from "@/lib/transactionDate";
 
 export interface Transaction {
   id: string;
@@ -10,6 +11,7 @@ export interface Transaction {
   description: string;
   amount: number;
   timestamp: Date;
+  transaction_date?: string;
   reconciliation_id?: string;
 }
 
@@ -27,39 +29,38 @@ export interface DailyReconciliation {
   updated_at: string;
 }
 
-export function useReconciliation() {
+export function useReconciliation(selectedDateInput?: string) {
   const [reconciliation, setReconciliation] = useState<DailyReconciliation | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const today = format(new Date(), "yyyy-MM-dd");
+  const selectedDate = getSelectedReconciliationDate(selectedDateInput);
 
-  // Load or create today's reconciliation (run once on mount).
   useEffect(() => {
-    loadTodayReconciliation();
+    loadReconciliationForDate(selectedDate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedDate]);
 
-  const loadTodayReconciliation = async () => {
+  const loadReconciliationForDate = async (date: string) => {
     setLoading(true);
+    setTransactions([]);
+
     try {
-      // Check if today's reconciliation exists
       const { data: existing, error: fetchError } = await supabase
         .from("daily_reconciliations")
         .select("*")
-        .eq("date", today)
+        .eq("date", date)
         .maybeSingle();
 
       if (fetchError) throw fetchError;
 
       if (existing) {
         setReconciliation(existing);
-        await loadTransactions(existing.id);
+        await loadTransactions(existing.id, date);
       } else {
-        // Create new reconciliation for today
         const { data: newRec, error: createError } = await supabase
           .from("daily_reconciliations")
-          .insert({ date: today })
+          .insert({ date })
           .select()
           .single();
 
@@ -74,12 +75,13 @@ export function useReconciliation() {
     }
   };
 
-  const loadTransactions = async (reconciliationId: string) => {
+  const loadTransactions = async (reconciliationId: string, fallbackDate?: string) => {
     try {
       const { data, error } = await supabase
         .from("transactions")
         .select("*")
         .eq("reconciliation_id", reconciliationId)
+        .order("transaction_date", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -91,6 +93,7 @@ export function useReconciliation() {
         description: t.description || "",
         amount: Number(t.amount),
         timestamp: new Date(t.created_at),
+        transaction_date: getTransactionDate(t.transaction_date, fallbackDate || selectedDate, t.created_at),
         reconciliation_id: t.reconciliation_id,
       }));
       setTransactions(mapped);
@@ -107,6 +110,7 @@ export function useReconciliation() {
         .from("transactions")
         .insert({
           reconciliation_id: reconciliation.id,
+          transaction_date: reconciliation.date,
           type: transaction.type,
           category: transaction.category,
           description: transaction.description || null,
@@ -124,6 +128,7 @@ export function useReconciliation() {
         description: data.description || "",
         amount: Number(data.amount),
         timestamp: new Date(data.created_at),
+        transaction_date: getTransactionDate(data.transaction_date, reconciliation.date, data.created_at),
         reconciliation_id: data.reconciliation_id,
       };
 

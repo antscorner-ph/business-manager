@@ -22,7 +22,7 @@ const Expenses = () => {
     deleteExpense,
   } = useExpenses();
 
-  if (loading) {
+  if (loading && expenses.length === 0) {
     return <PageLoader />;
   }
 

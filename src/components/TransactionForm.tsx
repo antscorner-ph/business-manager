@@ -19,6 +19,7 @@ export interface Transaction {
   description: string;
   amount: number;
   timestamp: Date;
+  transaction_date?: string;
 }
 
 interface TransactionFormProps {

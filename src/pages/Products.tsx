@@ -84,6 +84,7 @@ const Products = () => {
         totalCount={totalCount}
         query={query}
         onQueryChange={setQuery}
+        loading={loading}
       />
     </PageContainer>
   );

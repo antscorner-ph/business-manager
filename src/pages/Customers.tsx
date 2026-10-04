@@ -16,7 +16,9 @@ const Customers = () => {
     deleteCustomer,
   } = useCustomers();
 
-  if (loading) {
+  const isInitialLoad = loading && customers.length === 0 && query.page === 1 && !query.search;
+
+  if (isInitialLoad) {
     return <PageLoader />;
   }
 
@@ -35,6 +37,7 @@ const Customers = () => {
         onAddCustomer={addCustomer}
         onUpdateCustomer={updateCustomer}
         onDeleteCustomer={deleteCustomer}
+        loading={loading}
       />
     </PageContainer>
   );

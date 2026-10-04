@@ -17,6 +17,15 @@ export interface Receivable {
   updated_at: string;
 }
 
+export type UpdateReceivableInput = {
+  customer_name?: string;
+  description?: string | null;
+  amount?: number;
+  date_issued?: string;
+  due_date?: string | null;
+  notes?: string | null;
+};
+
 export interface ReceivablePayment {
   id: string;
   receivable_id: string;
@@ -152,6 +161,24 @@ export function useReceivables() {
     }
   };
 
+  const updateReceivable = async (id: string, updates: UpdateReceivableInput) => {
+    try {
+      const { error } = await supabase
+        .from("receivables")
+        .update(updates)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await loadReceivables();
+      toast.success("Receivable updated successfully");
+    } catch (error) {
+      console.error("Error updating receivable:", error);
+      toast.error("Failed to update receivable");
+      throw error;
+    }
+  };
+
   const addPayment = async (
     payment: Omit<ReceivablePayment, "id" | "created_at">
   ) => {
@@ -198,6 +225,7 @@ export function useReceivables() {
     setQuery,
     loading,
     addReceivable,
+    updateReceivable,
     addPayment,
     updateStatus,
     reload: loadReceivables,

@@ -18,11 +18,12 @@ const Receivables = () => {
     setQuery,
     loading,
     addReceivable,
+    updateReceivable,
     addPayment,
     updateStatus,
   } = useReceivables();
 
-  if (loading) {
+  if (loading && receivables.length === 0) {
     return <PageLoader />;
   }
 
@@ -176,8 +177,10 @@ const Receivables = () => {
         query={query}
         onQueryChange={setQuery}
         onAddReceivable={addReceivable}
+        onUpdateReceivable={updateReceivable}
         onAddPayment={addPayment}
         onUpdateStatus={updateStatus}
+        loading={loading}
       />
     </PageContainer>
   );

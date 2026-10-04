@@ -111,7 +111,8 @@ const zeroValues = (monthKeys: string[]) =>
 // ---------------------------------------------------------------------------
 
 export type PLTransaction = {
-  created_at: string;
+  transaction_date?: string | null;
+  created_at?: string | null;
   type: string;
   category: string;
   amount: number;
@@ -168,7 +169,9 @@ export const computeProfitAndLoss = (
 
   for (const tx of transactions) {
     if (tx.type !== "cash_in") continue;
-    const monthKey = plMonthKey(tx.created_at);
+    const txDate = tx.transaction_date ?? tx.created_at ?? "";
+    if (!txDate) continue;
+    const monthKey = plMonthKey(txDate);
     if (!monthKeys.includes(monthKey)) continue;
 
     const amount = Number(tx.amount || 0);
@@ -342,7 +345,13 @@ export type BSPurchaseOrder = {
 };
 export type BSPurchaseOrderItem = { purchase_order_id: string; product_sku: string | null; unit_cost: number };
 export type BSExpense = { expense_date: string; amount: number; status: string; payment_method: string };
-export type BSTransaction = { created_at: string; type: string; category: string; amount: number };
+export type BSTransaction = {
+  transaction_date?: string | null;
+  created_at?: string | null;
+  type: string;
+  category: string;
+  amount: number;
+};
 export type BSProduct = { sku: string; qty: number | null; price: number | null };
 
 export type BalanceSheetResult = {
@@ -420,7 +429,7 @@ export const computeBalanceSheet = (
     const gcashFromTransactions = sumThroughDate(
       data.transactions,
       monthEnd,
-      (r) => r.created_at,
+      (r) => r.transaction_date ?? r.created_at ?? "",
       (r) => r.amount,
       (r) => r.type === "cash_in" && isGcashLike(r.category)
     );
@@ -509,7 +518,7 @@ export const computeBalanceSheet = (
     const revenueCashIn = sumThroughDate(
       data.transactions,
       monthEnd,
-      (r) => r.created_at,
+      (r) => r.transaction_date ?? r.created_at ?? "",
       (r) => r.amount,
       (r) => r.type === "cash_in"
     );

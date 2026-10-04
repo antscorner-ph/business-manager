@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CreditCard, ExternalLink, Search, ShoppingCart, Wallet } from "lucide-react";
+import { AlertTriangle, CreditCard, ExternalLink, Loader2, Search, ShoppingCart, Wallet } from "lucide-react";
 import { KpiDateRangeFilter } from "@/components/KpiDateRangeFilter";
 import { SummaryCard } from "@/components/SummaryCard";
 import { PageContainer } from "@/components/PageContainer";
@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("en-PH", {
@@ -50,6 +51,17 @@ const Payables = () => {
   const { payables, query, setQuery, loading, reload } = usePayables();
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [selectedPayable, setSelectedPayable] = useState<PayableRecord | null>(null);
+  const [searchInput, setSearchInput] = useState(query.search);
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
+
+  useEffect(() => {
+    setSearchInput(query.search);
+  }, [query.search]);
+
+  useEffect(() => {
+    if (debouncedSearch === query.search) return;
+    setQuery({ ...query, search: debouncedSearch });
+  }, [debouncedSearch, query, setQuery]);
 
   const openPayDialog = (payable: PayableRecord) => {
     setSelectedPayable(payable);
@@ -60,7 +72,7 @@ const Payables = () => {
     setQuery({ ...query, startDate, endDate });
   };
 
-  if (loading) {
+  if (loading && payables.length === 0) {
     return <PageLoader />;
   }
 
@@ -103,11 +115,14 @@ const Payables = () => {
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                className="pl-9"
+                className="pl-9 pr-9"
                 placeholder="Search reference, vendor, note..."
-                value={query.search}
-                onChange={(e) => setQuery({ ...query, search: e.target.value })}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
               />
+              {loading && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              )}
             </div>
             <Select
               value={query.source}

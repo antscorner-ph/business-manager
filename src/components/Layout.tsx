@@ -62,7 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Daily Operations",
     items: [
       { title: "Dashboard", path: "/", icon: LayoutDashboard },
-      { title: "Daily Reconciliation", path: "/reconciliation", icon: Calculator },
+      { title: "Transactions", path: "/reconciliation", icon: Calculator },
       { title: "Bank Deposits", path: "/bank-deposits", icon: Landmark },
       { title: "Purchase Orders", path: "/purchase-orders", icon: ShoppingCart },
     ],

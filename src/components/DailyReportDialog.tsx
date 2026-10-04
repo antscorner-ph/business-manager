@@ -32,6 +32,7 @@ interface Transaction {
   description: string | null;
   amount: number;
   created_at: string;
+  transaction_date?: string | null;
 }
 
 interface DailyReportDialogProps {
@@ -62,6 +63,7 @@ export function DailyReportDialog({
         .from("transactions")
         .select("*")
         .eq("reconciliation_id", reconciliationId)
+        .order("transaction_date", { ascending: true })
         .order("created_at", { ascending: true });
 
       if (error) throw error;

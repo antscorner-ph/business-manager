@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Plus, ChevronLeft, ChevronRight, Search, ReceiptText, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ import {
   formatTagLabel,
   getTagClass,
 } from "@/lib/tagStyles";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface ExpensesManagerProps {
   expenses: Expense[];
@@ -96,6 +97,17 @@ export function ExpensesManager({
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [amountError, setAmountError] = useState("");
+  const [searchInput, setSearchInput] = useState(query.search);
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
+
+  useEffect(() => {
+    setSearchInput(query.search);
+  }, [query.search]);
+
+  useEffect(() => {
+    if (debouncedSearch === query.search) return;
+    onQueryChange({ ...query, search: debouncedSearch, page: 1 });
+  }, [debouncedSearch, query, onQueryChange]);
 
   const totalPages = Math.ceil(totalCount / query.pageSize);
 
@@ -323,8 +335,8 @@ export function ExpensesManager({
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search description, notes, category..."
-                value={query.search}
-                onChange={(e) => onQueryChange({ ...query, search: e.target.value, page: 1 })}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
               />
             </div>
 

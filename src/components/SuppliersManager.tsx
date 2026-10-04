@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PlusCircle, Pencil, Trash2, Search } from "lucide-react";
 import { Supplier, CreateSupplierData, SuppliersQuery } from "@/hooks/useSuppliers";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface SuppliersManagerProps {
   suppliers: Supplier[];
@@ -69,6 +70,17 @@ export const SuppliersManager = ({
     payment_terms: "",
     notes: "",
   });
+  const [searchInput, setSearchInput] = useState(query.search);
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
+
+  useEffect(() => {
+    setSearchInput(query.search);
+  }, [query.search]);
+
+  useEffect(() => {
+    if (debouncedSearch === query.search) return;
+    onQueryChange({ ...query, search: debouncedSearch, page: 1 });
+  }, [debouncedSearch, query, onQueryChange]);
 
   const handleAddSupplier = async () => {
     if (!formData.name.trim()) {
@@ -220,10 +232,8 @@ export const SuppliersManager = ({
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, email, or phone..."
-                  value={query.search}
-                  onChange={(e) =>
-                    onQueryChange({ ...query, search: e.target.value, page: 1 })
-                  }
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className="flex-1"
                 />
               </div>
