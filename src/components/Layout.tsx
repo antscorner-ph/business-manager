@@ -19,6 +19,7 @@ import {
   Shield,
   CreditCard,
   LogOut,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,10 +54,6 @@ interface NavGroup {
   items: NavItem[];
 }
 
-/**
- * Navigation grouped by the store's daily workflow:
- * record sales -> reconcile & deposit -> track money owed -> manage contacts -> review records.
- */
 const NAV_GROUPS: NavGroup[] = [
   {
     label: "Daily Operations",
@@ -79,6 +76,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Directory",
     items: [
       { title: "Products", path: "/products", icon: Package },
+      { title: "Consignees", path: "/consignees", icon: Store },
       { title: "Customers", path: "/customers", icon: Contact },
       { title: "Suppliers", path: "/suppliers", icon: Truck },
     ],

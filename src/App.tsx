@@ -19,6 +19,7 @@ import PurchaseOrders from "./pages/PurchaseOrders";
 import GeneratePurchaseOrder from "./pages/GeneratePurchaseOrder";
 import Customers from "./pages/Customers";
 import Suppliers from "./pages/Suppliers";
+import Consignees from "./pages/Consignees";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import TimeClock from "./pages/TimeClock";
@@ -58,6 +59,7 @@ const App = () => (
                     <Route path="/purchase-orders" element={<PurchaseOrders />} />
                     <Route path="/customers" element={<Customers />} />
                     <Route path="/suppliers" element={<Suppliers />} />
+                    <Route path="/consignees" element={<Consignees />} />
                     <Route path="/products" element={<Products />} />
                     <Route path="/products/:sku" element={<ProductDetail />} />
                     <Route path="/time-clock" element={<TimeClock />} />
