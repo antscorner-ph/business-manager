@@ -89,7 +89,7 @@ const DailyReconciliation = () => {
       />
 
       {/* Summary Cards */}
-      <div className="mb-8 grid gap-4 md:grid-cols-4">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           title="Opening Balance"
           value={formatCurrency(openingBalance)}

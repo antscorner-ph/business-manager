@@ -121,4 +121,26 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Touch devices (iPad): 16px inputs stop Safari zooming on focus, and controls get a
+     comfortable minimum tap height. Mouse/trackpad layouts are unaffected. */
+  @media (pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+
+    [role="combobox"],
+    input:not([type="checkbox"]):not([type="radio"]),
+    select {
+      min-height: 40px;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"] {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+  }
 }

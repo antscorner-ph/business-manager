@@ -108,7 +108,7 @@ const Expenses = () => {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-4 mb-8">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
         <SummaryCard
           title="This Month Spend"
           value={formatCurrency(thisMonthSpend)}

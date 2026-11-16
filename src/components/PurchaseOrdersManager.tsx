@@ -210,7 +210,7 @@ export const PurchaseOrdersManager = ({
                 </Link>
               </Button>
           </div>
-            <div className="grid gap-4 md:grid-cols-5">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
                    <Input

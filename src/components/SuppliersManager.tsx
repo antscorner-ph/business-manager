@@ -227,7 +227,7 @@ export const SuppliersManager = ({
           </DialogContent>
         </Dialog>
             </div>
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
@@ -250,7 +250,7 @@ export const SuppliersManager = ({
                   <SelectItem value="date_desc">Newest First</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" onClick={handleClearFilters} className="md:col-span-2">
+              <Button variant="outline" onClick={handleClearFilters} className="sm:col-span-2">
                 Clear Filters
               </Button>
             </div>

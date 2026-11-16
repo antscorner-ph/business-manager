@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -113,6 +114,18 @@ export function Layout({ children }: LayoutProps) {
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Tablets (iPad) get the compact icon rail by default; wide screens get the full sidebar.
+  // Follows the viewport, so rotating the device switches between the two.
+  const [sidebarOpen, setSidebarOpen] = useState(
+    () => typeof window === "undefined" || window.matchMedia("(min-width: 1280px)").matches,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1280px)");
+    const onChange = (e: MediaQueryListEvent) => setSidebarOpen(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -131,12 +144,12 @@ export function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <SidebarProvider>
-      <Sidebar>
+    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
+      <Sidebar collapsible="icon">
         <SidebarHeader>
-          <div className="flex items-center gap-2 px-4 py-2">
+          <div className="flex items-center gap-2 px-4 py-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center">
             <img src="/logo.png" alt="Ant's Corner Logo" className="h-8 w-8 rounded-lg" />
-            <div className="flex flex-col">
+            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
               <span className="font-semibold text-sm">Ant's Corner</span>
               <span className="text-xs text-muted-foreground">Business Manager</span>
             </div>
@@ -152,7 +165,7 @@ export function Layout({ children }: LayoutProps) {
                     const Icon = item.icon;
                     return (
                       <SidebarMenuItem key={item.path}>
-                        <SidebarMenuButton asChild isActive={isActive(item.path)}>
+                        <SidebarMenuButton asChild isActive={isActive(item.path)} tooltip={item.title}>
                           <Link to={item.path}>
                             <Icon className="h-4 w-4" />
                             <span>{item.title}</span>
@@ -168,8 +181,8 @@ export function Layout({ children }: LayoutProps) {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
-          <SidebarTrigger />
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4 pt-[env(safe-area-inset-top)]">
+          <SidebarTrigger className="h-10 w-10 xl:h-7 xl:w-7" />
           <div className="h-4 w-px bg-border" />
           <div className="flex-1" />
           <Button variant="ghost" size="sm" onClick={handleLogout}>

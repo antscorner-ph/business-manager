@@ -101,7 +101,7 @@ const Payables = () => {
         </CardContent>
       </Card>
 
-      <div className="mb-8 grid gap-4 md:grid-cols-4">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard title="Total Open" value={formatCurrency(totalOpen)} icon={Wallet} variant={totalOpen > 0 ? "warning" : "success"} />
         <SummaryCard title="PO Payables" value={formatCurrency(purchaseOrderOpen)} icon={ShoppingCart} variant={purchaseOrderOpen > 0 ? "warning" : "success"} />
         <SummaryCard title="Expense Payables" value={formatCurrency(expenseOpen)} icon={CreditCard} variant={expenseOpen > 0 ? "warning" : "success"} />
@@ -111,8 +111,8 @@ const Payables = () => {
       <Card>
         <CardHeader>
           <CardTitle>Open Payables Register</CardTitle>
-          <div className="grid gap-3 md:grid-cols-5">
-            <div className="relative md:col-span-2">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="relative sm:col-span-2">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="pl-9 pr-9"

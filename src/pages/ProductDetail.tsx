@@ -168,7 +168,7 @@ const ProductDetail = () => {
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Stock Status</CardTitle>

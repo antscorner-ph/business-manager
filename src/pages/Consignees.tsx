@@ -506,7 +506,7 @@ function AddProductDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-1 min-h-0 flex-col gap-4 md:flex-row">
+        <div className="flex flex-1 min-h-0 flex-col gap-4 lg:flex-row">
           {/* Catalog */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -640,7 +640,7 @@ function AddProductDialog({
           </div>
 
           {/* Selection */}
-          <div className="flex min-h-0 w-full flex-col gap-3 rounded-md border p-3 md:w-80">
+          <div className="flex max-h-[11rem] min-h-0 w-full shrink-0 flex-col gap-3 rounded-md border p-3 lg:max-h-none lg:w-80">
             <div className="flex items-center justify-between">
               <div className="text-sm font-medium">Selected ({selectedList.length})</div>
               {selectedList.length > 0 && (

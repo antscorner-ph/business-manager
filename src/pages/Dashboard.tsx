@@ -381,7 +381,7 @@ const Dashboard = () => {
               <CardDescription>Common tasks and operations</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <Link to="/reconciliation">
                   <Button variant="outline" className="w-full h-20 flex flex-col">
                     <Calculator className="h-6 w-6 mb-2" />
