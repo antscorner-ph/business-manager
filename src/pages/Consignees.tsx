@@ -24,10 +24,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import {
   useConsignees,
   useConsigneeProducts,
-  useProductsCatalog,
+  useProductNames,
+  useProductsPage,
+  useProductCategories,
   useConsignmentTransactions,
   type Consignee,
   type ConsignedProduct,
@@ -162,7 +165,6 @@ function ConsigneeDetails({ consignee, onClose }: { consignee: Consignee; onClos
 
   const { consignedProducts, loading: loadingProducts, addProductToConsignee, removeProduct, fetchProducts } =
     useConsigneeProducts(consignee.id);
-  const { products: catalog, loading: loadingCatalog } = useProductsCatalog();
   const {
     transactions,
     loading: loadingTx,
@@ -178,7 +180,7 @@ function ConsigneeDetails({ consignee, onClose }: { consignee: Consignee; onClos
     0
   );
 
-  const productName = (sku: string) => catalog.find((p) => p.sku === sku)?.name || sku;
+  const productName = useProductNames(consignedProducts.map((cp) => cp.product_sku));
 
   const handleError = (e: unknown, fallback: string) => {
     const message = e instanceof Error ? e.message : fallback;
@@ -225,7 +227,6 @@ function ConsigneeDetails({ consignee, onClose }: { consignee: Consignee; onClos
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold">Consigned Products</h3>
               <AddProductDialog
-                products={catalog}
                 existingSkus={consignedProducts.map((cp) => cp.product_sku)}
                 onAdd={async (sku, qty) => {
                   await addProductToConsignee(sku, qty);
@@ -245,7 +246,7 @@ function ConsigneeDetails({ consignee, onClose }: { consignee: Consignee; onClos
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loadingProducts || loadingCatalog ? (
+                {loadingProducts ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-10">
                       <Loader2 className="h-4 w-4 animate-spin mx-auto" />
@@ -401,37 +402,84 @@ function ConsigneeDetails({ consignee, onClose }: { consignee: Consignee; onClos
   );
 }
 
+const PICKER_PAGE_SIZE = 25;
+
 function AddProductDialog({
-  products,
   existingSkus,
   onAdd,
   onDone,
   onError,
 }: {
-  products: Product[];
   existingSkus: string[];
   onAdd: (sku: string, qty: number) => Promise<void>;
   onDone: () => void;
   onError: (e: unknown) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
+  // Selections are kept as full rows so they survive paging and filter changes.
+  const [selected, setSelected] = useState<Record<string, Product>>({});
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const available = products.filter((p) => !existingSkus.includes(p.sku));
-  const validSelections = selectedSkus.filter((sku) => (quantities[sku] || 0) > 0);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('all');
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+  const categories = useProductCategories(open);
+  const { products: rows, totalCount, loading } = useProductsPage(
+    {
+      page,
+      pageSize: PICKER_PAGE_SIZE,
+      search: debouncedSearch,
+      category,
+      inStockOnly,
+      excludeSkus: existingSkus,
+    },
+    open
+  );
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PICKER_PAGE_SIZE));
+  const selectedList = Object.values(selected);
+  const validSelections = selectedList.filter((p) => (quantities[p.sku] || 0) > 0);
+  const allRowsSelected = rows.length > 0 && rows.every((p) => selected[p.sku]);
+  const hasFilters = search !== '' || category !== 'all' || inStockOnly;
+
+  const toggle = (p: Product) =>
+    setSelected((prev) => {
+      const next = { ...prev };
+      if (next[p.sku]) delete next[p.sku];
+      else next[p.sku] = p;
+      return next;
+    });
+
+  const togglePage = () =>
+    setSelected((prev) => {
+      const next = { ...prev };
+      if (allRowsSelected) rows.forEach((p) => delete next[p.sku]);
+      else rows.forEach((p) => (next[p.sku] = p));
+      return next;
+    });
+
+  const clearFilters = () => {
+    setSearch('');
+    setCategory('all');
+    setInStockOnly(false);
+    setPage(1);
+  };
 
   const reset = () => {
-    setSelectedSkus([]);
+    setSelected({});
     setQuantities({});
+    clearFilters();
   };
 
   const handleAdd = async () => {
     setSubmitting(true);
     try {
-      for (const sku of validSelections) {
-        await onAdd(sku, quantities[sku]);
+      for (const p of validSelections) {
+        await onAdd(p.sku, quantities[p.sku]);
       }
       reset();
       setOpen(false);
@@ -450,64 +498,204 @@ function AddProductDialog({
           <Plus className="w-4 h-4" /> Add Products
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="flex flex-col w-[95vw] max-w-6xl h-[90vh] gap-4">
         <DialogHeader>
           <DialogTitle>Add Consigned Products</DialogTitle>
-          <DialogDescription>Select products and set an initial quantity.</DialogDescription>
+          <DialogDescription>
+            Search and filter the catalog, select products across pages, then set quantities.
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="max-h-48 overflow-y-auto space-y-2 border rounded-md p-2">
-            {available.length === 0 ? (
-              <p className="text-sm text-muted-foreground p-2">All catalog products are already consigned.</p>
-            ) : (
-              available.map((p) => (
-                <div key={p.sku} className="flex items-center gap-2 p-1 hover:bg-muted rounded">
-                  <input
-                    type="checkbox"
-                    id={`chk-${p.sku}`}
-                    className="rounded"
-                    checked={selectedSkus.includes(p.sku)}
-                    onChange={() => {
-                      setSelectedSkus((prev) =>
-                        prev.includes(p.sku) ? prev.filter((s) => s !== p.sku) : [...prev, p.sku]
-                      );
-                    }}
-                  />
-                  <label htmlFor={`chk-${p.sku}`} className="text-sm cursor-pointer flex-1">
-                    {p.name || p.sku}{' '}
-                    <span className="text-muted-foreground text-xs">({p.sku}) · {peso(p.price)}</span>
-                  </label>
-                </div>
-              ))
-            )}
-          </div>
-          {selectedSkus.length > 0 && (
-            <div className="space-y-3">
-              <div className="text-sm font-medium">Set Quantities</div>
-              {selectedSkus.map((sku) => (
-                <div key={sku} className="flex items-center justify-between gap-4">
-                  <span className="text-sm">{products.find((p) => p.sku === sku)?.name || sku}</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    className="w-20 h-8 text-center"
-                    value={quantities[sku] || ''}
-                    onChange={(e) =>
-                      setQuantities((prev) => ({ ...prev, [sku]: Math.max(0, parseInt(e.target.value) || 0) }))
-                    }
-                  />
-                </div>
-              ))}
+
+        <div className="flex flex-1 min-h-0 flex-col gap-4 md:flex-row">
+          {/* Catalog */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative min-w-[200px] flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, SKU or category..."
+                  className="pl-8"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                />
+              </div>
+              <select
+                aria-label="Filter by category"
+                className="h-9 max-w-[220px] rounded-md border bg-background px-3 text-sm"
+                value={category}
+                onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+              >
+                <option value="all">All categories</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="rounded"
+                  checked={inStockOnly}
+                  onChange={(e) => { setInStockOnly(e.target.checked); setPage(1); }}
+                />
+                In stock only
+              </label>
+              {hasFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>Clear filters</Button>
+              )}
             </div>
-          )}
+
+            <div className="flex-1 min-h-0 overflow-auto rounded-md border">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background">
+                  <TableRow>
+                    <TableHead className="w-10">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all on this page"
+                        className="rounded"
+                        checked={allRowsSelected}
+                        disabled={rows.length === 0}
+                        onChange={togglePage}
+                      />
+                    </TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-right">Stock</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-10">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ) : rows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                        {hasFilters ? 'No products match your search or filters.' : 'No products available to add.'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    rows.map((p) => {
+                      const stock = Number(p.qty ?? 0);
+                      return (
+                        <TableRow
+                          key={p.sku}
+                          className="cursor-pointer"
+                          data-state={selected[p.sku] ? 'selected' : undefined}
+                          onClick={() => toggle(p)}
+                        >
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              aria-label={`Select ${p.name || p.sku}`}
+                              className="rounded"
+                              checked={!!selected[p.sku]}
+                              onChange={() => toggle(p)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">{p.name || p.sku}</div>
+                            <div className="text-xs text-muted-foreground">{p.sku}</div>
+                          </TableCell>
+                          <TableCell className="text-sm">{p.category || '—'}</TableCell>
+                          <TableCell className="text-right">{peso(p.price)}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={stock > 0 ? 'secondary' : 'outline'}>
+                              {stock > 0 ? stock : 'Out'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>{totalCount.toLocaleString()} products</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((n) => n - 1)}
+                >
+                  Previous
+                </Button>
+                <span>Page {page} of {totalPages}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => setPage((n) => n + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Selection */}
+          <div className="flex min-h-0 w-full flex-col gap-3 rounded-md border p-3 md:w-80">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Selected ({selectedList.length})</div>
+              {selectedList.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setSelected({}); setQuantities({}); }}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
+              {selectedList.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Tick products on the left. Your selection is kept while you search and change pages.
+                </p>
+              ) : (
+                selectedList.map((p) => (
+                  <div key={p.sku} className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm">{p.name || p.sku}</div>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-destructive"
+                        onClick={() => toggle(p)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <Input
+                      type="number"
+                      min={1}
+                      placeholder="Qty"
+                      aria-label={`Quantity for ${p.name || p.sku}`}
+                      className="h-8 w-20 shrink-0 text-center"
+                      value={quantities[p.sku] || ''}
+                      onChange={(e) =>
+                        setQuantities((prev) => ({ ...prev, [p.sku]: Math.max(0, parseInt(e.target.value) || 0) }))
+                      }
+                    />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
+
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
           </DialogClose>
           <Button onClick={handleAdd} disabled={validSelections.length === 0 || submitting}>
             {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Add Selected
+            Add Selected{validSelections.length > 0 ? ` (${validSelections.length})` : ''}
           </Button>
         </DialogFooter>
       </DialogContent>
