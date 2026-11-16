@@ -71,6 +71,13 @@ export function ProfitLossTable({ report }: ProfitLossTableProps) {
                 "bg-primary/10 font-semibold"
               )}
 
+              {renderDataRow(
+                report.grossProfit,
+                monthKeys,
+                "bg-emerald/10",
+                "bg-emerald/10 font-semibold"
+              )}
+
               <TableRow>
                 <TableCell className="font-semibold sticky left-0 bg-muted/40">Expenses</TableCell>
                 {monthKeys.map((monthKey) => (

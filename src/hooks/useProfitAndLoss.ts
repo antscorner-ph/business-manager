@@ -24,6 +24,7 @@ export type ProfitLossReport = {
   months: ProfitLossMonth[];
   revenueRows: ProfitLossRow[];
   expenseRows: ProfitLossRow[];
+  grossProfit: ProfitLossRow;
   totalRevenue: ProfitLossRow;
   totalExpenses: ProfitLossRow;
   netIncome: ProfitLossRow;
@@ -70,6 +71,8 @@ export function useProfitAndLoss() {
       const computed = computeProfitAndLoss(monthKeys, transactions, expenses);
 
       const salesRevenueRow = toRow("Sales Revenue", computed.salesRevenue);
+      const costOfGoodsSoldRow = toRow("Cost of Goods Sold", computed.costOfGoodsSold);
+      const grossProfitRow = toRow("Gross Profit", computed.grossProfit);
       const otherIncomeRow = toRow("Other Income", computed.otherIncome);
 
       const personnelSection = toRow(
@@ -99,7 +102,8 @@ export function useProfitAndLoss() {
       setReport({
         months,
         revenueRows: [salesRevenueRow, otherIncomeRow],
-        expenseRows,
+        expenseRows: [costOfGoodsSoldRow, ...expenseRows.filter((row) => row.label !== "Cost of Goods Sold")],
+        grossProfit: grossProfitRow,
         totalRevenue: toRow("Total Revenue", computed.totalRevenue),
         totalExpenses: toRow("Total Expenses", computed.totalExpenses),
         netIncome: toRow("Net Income (Loss)", computed.netIncome),

@@ -115,6 +115,26 @@ describe("computeProfitAndLoss", () => {
     expect(result.netIncome["2026-05"]).toBe(650);
   });
 
+  it("subtracts cost of goods sold before calculating gross profit and net income", () => {
+    const result = computeProfitAndLoss(
+      monthKeys,
+      [
+        { created_at: "2026-05-10", type: "cash_in", category: "Sales", amount: 1000 },
+        { created_at: "2026-05-14", type: "cash_out", category: "Cost of Goods Sold", amount: 600 },
+      ],
+      [
+        { expense_date: "2026-05-05", category: "Salaries", amount: 200, status: "paid" },
+      ]
+    );
+
+    expect(result.salesRevenue["2026-05"]).toBe(1000);
+    expect(result.costOfGoodsSold["2026-05"]).toBe(600);
+    expect(result.grossProfit["2026-05"]).toBe(400);
+    expect(result.expenseByLabel["Cost of Goods Sold"]["2026-05"]).toBe(600);
+    expect(result.totalExpenses["2026-05"]).toBe(800);
+    expect(result.netIncome["2026-05"]).toBe(200);
+  });
+
   it("ignores transactions outside the month window", () => {
     const result = computeProfitAndLoss(
       monthKeys,

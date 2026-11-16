@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { Plus, ChevronLeft, ChevronRight, Search, ReceiptText, Trash2 } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Pencil, Search, ReceiptText, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +37,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Expense, ExpensesQuery } from "@/hooks/useExpenses";
+import { Expense, ExpensesQuery, UpdateExpenseInput } from "@/hooks/useExpenses";
 import {
   EXPENSE_CATEGORY_TAG_CLASSES,
   PAYMENT_METHOD_TAG_CLASSES,
@@ -45,6 +45,7 @@ import {
   formatTagLabel,
   getTagClass,
 } from "@/lib/tagStyles";
+import { DEFAULT_EXPENSE_CATEGORY, EXPENSE_CATEGORY_OPTIONS } from "@/lib/expenseCategories";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface ExpensesManagerProps {
@@ -53,22 +54,10 @@ interface ExpensesManagerProps {
   query: ExpensesQuery;
   onQueryChange: (query: ExpensesQuery) => void;
   onAddExpense: (expense: Omit<Expense, "id" | "created_at" | "updated_at">) => Promise<void>;
+  onUpdateExpense: (id: string, updates: UpdateExpenseInput) => Promise<void>;
   onUpdateStatus: (id: string, status: "paid" | "unpaid" | "partially_paid") => Promise<void>;
   onDeleteExpense: (id: string) => Promise<void>;
 }
-
-const EXPENSE_CATEGORIES = [
-  "Salaries",
-  "Operating Expense",
-  "Utilities",
-  "Rental Expense",
-  "Office Supply",
-  "Store Renovation",
-  "Inventory Write-Off",
-  "Marketing",
-  "Transportation",
-  "Other",
-];
 
 const PAYMENT_METHODS = [
   { value: "cash", label: "Cash" },
@@ -84,19 +73,30 @@ export function ExpensesManager({
   query,
   onQueryChange,
   onAddExpense,
+  onUpdateExpense,
   onUpdateStatus,
   onDeleteExpense,
 }: ExpensesManagerProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const [expenseDate, setExpenseDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Operating Expense");
+  const [category, setCategory] = useState(DEFAULT_EXPENSE_CATEGORY);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash" | "check" | "bank_transfer" | "other">("cash");
   const [status, setStatus] = useState<"paid" | "unpaid" | "partially_paid">("paid");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [amountError, setAmountError] = useState("");
+  const [editExpenseDate, setEditExpenseDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [editDescription, setEditDescription] = useState("");
+  const [editCategory, setEditCategory] = useState(DEFAULT_EXPENSE_CATEGORY);
+  const [editPaymentMethod, setEditPaymentMethod] = useState<"cash" | "gcash" | "check" | "bank_transfer" | "other">("cash");
+  const [editStatus, setEditStatus] = useState<"paid" | "unpaid" | "partially_paid">("paid");
+  const [editAmount, setEditAmount] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editAmountError, setEditAmountError] = useState("");
   const [searchInput, setSearchInput] = useState(query.search);
   const debouncedSearch = useDebouncedValue(searchInput, 300);
 
@@ -153,13 +153,61 @@ export function ExpensesManager({
 
     setExpenseDate(format(new Date(), "yyyy-MM-dd"));
     setDescription("");
-    setCategory("Operating Expense");
+    setCategory(DEFAULT_EXPENSE_CATEGORY);
     setPaymentMethod("cash");
     setStatus("paid");
     setAmount("");
     setNotes("");
     setAmountError("");
     setAddDialogOpen(false);
+  };
+
+  const openEditDialog = (expense: Expense) => {
+    setEditingExpense(expense);
+    setEditExpenseDate(expense.expense_date);
+    setEditDescription(expense.description);
+    setEditCategory(expense.category || DEFAULT_EXPENSE_CATEGORY);
+    setEditPaymentMethod(expense.payment_method || "cash");
+    setEditStatus(expense.status as "paid" | "unpaid" | "partially_paid");
+    setEditAmount(String(expense.amount));
+    setEditNotes(expense.notes || "");
+    setEditAmountError("");
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!editingExpense) return;
+
+    const validationError = validateAmount(editAmount);
+    if (validationError) {
+      setEditAmountError(validationError);
+      return;
+    }
+
+    if (!editDescription || !editCategory) return;
+
+    await onUpdateExpense(editingExpense.id, {
+      expense_date: editExpenseDate,
+      description: editDescription,
+      category: editCategory,
+      payment_method: editPaymentMethod,
+      status: editStatus,
+      amount: Number(editAmount),
+      notes: editNotes || null,
+    });
+
+    setEditDialogOpen(false);
+    setEditingExpense(null);
+    setEditExpenseDate(format(new Date(), "yyyy-MM-dd"));
+    setEditDescription("");
+    setEditCategory(DEFAULT_EXPENSE_CATEGORY);
+    setEditPaymentMethod("cash");
+    setEditStatus("paid");
+    setEditAmount("");
+    setEditNotes("");
+    setEditAmountError("");
   };
 
   const renderCategoryTag = (value: string) => (
@@ -235,7 +283,7 @@ export function ExpensesManager({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {EXPENSE_CATEGORIES.map((item) => (
+                          {EXPENSE_CATEGORY_OPTIONS.map((item) => (
                             <SelectItem key={item} value={item}>
                               {item}
                             </SelectItem>
@@ -330,7 +378,7 @@ export function ExpensesManager({
             </Dialog>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-6">
             <div className="flex items-center gap-2 md:col-span-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
@@ -339,6 +387,23 @@ export function ExpensesManager({
                 onChange={(e) => setSearchInput(e.target.value)}
               />
             </div>
+
+            <Select
+              value={query.sortBy}
+              onValueChange={(value: ExpensesQuery["sortBy"]) =>
+                onQueryChange({ ...query, sortBy: value, page: 1 })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date_asc">Date Oldest First</SelectItem>
+                <SelectItem value="date_desc">Date Newest First</SelectItem>
+                <SelectItem value="amount_asc">Amount Low to High</SelectItem>
+                <SelectItem value="amount_desc">Amount High to Low</SelectItem>
+              </SelectContent>
+            </Select>
 
             <Select
               value={query.status}
@@ -383,7 +448,7 @@ export function ExpensesManager({
                   ...query,
                   page: 1,
                   search: "",
-                  sortBy: "date",
+                  sortBy: "date_desc",
                   status: "all",
                   paymentMethod: "all",
                   category: "all",
@@ -395,6 +460,135 @@ export function ExpensesManager({
           </div>
         </div>
       </CardHeader>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <form onSubmit={handleUpdateExpense}>
+            <DialogHeader>
+              <DialogTitle>Edit Expense</DialogTitle>
+              <DialogDescription>Update the expense details and category.</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="editExpenseDate">Date</Label>
+                <Input
+                  id="editExpenseDate"
+                  type="date"
+                  value={editExpenseDate}
+                  onChange={(e) => setEditExpenseDate(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editDescription">Description *</Label>
+                <Input
+                  id="editDescription"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="e.g., Electric Bill"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editCategory">Category *</Label>
+                <Select value={editCategory} onValueChange={setEditCategory}>
+                  <SelectTrigger id="editCategory">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EXPENSE_CATEGORY_OPTIONS.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editPaymentMethod">Payment</Label>
+                  <Select
+                    value={editPaymentMethod}
+                    onValueChange={(value: "cash" | "gcash" | "check" | "bank_transfer" | "other") => setEditPaymentMethod(value)}
+                  >
+                    <SelectTrigger id="editPaymentMethod">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_METHODS.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="editStatus">Status</Label>
+                  <Select
+                    value={editStatus}
+                    onValueChange={(value: "paid" | "unpaid" | "partially_paid") => setEditStatus(value)}
+                  >
+                    <SelectTrigger id="editStatus">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="unpaid">Unpaid</SelectItem>
+                      <SelectItem value="partially_paid">Partially Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editAmount">Amount *</Label>
+                <Input
+                  id="editAmount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editAmount}
+                  onChange={(e) => {
+                    setEditAmount(e.target.value);
+                    if (editAmountError) {
+                      setEditAmountError(validateAmount(e.target.value));
+                    }
+                  }}
+                  placeholder="0.00"
+                  aria-invalid={Boolean(editAmountError)}
+                  required
+                />
+                {editAmountError && <p className="text-sm text-destructive">{editAmountError}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editNotes">Notes</Label>
+                <Textarea
+                  id="editNotes"
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Optional notes"
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!editDescription || !editCategory || !!editAmountError}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <CardContent>
         <div className="rounded-md border">
@@ -445,14 +639,24 @@ export function ExpensesManager({
                       {expense.notes || "-"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => onDeleteExpense(expense.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => openEditDialog(expense)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => onDeleteExpense(expense.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -31,7 +31,7 @@ export type CustomersQuery = {
   page: number;
   pageSize: number;
   search: string;
-  sortBy: "name" | "date";
+  sortBy: "name_asc" | "name_desc" | "date_asc" | "date_desc";
 };
 
 export const useCustomers = () => {
@@ -43,7 +43,7 @@ export const useCustomers = () => {
     page: 1,
     pageSize: 10,
     search: "",
-    sortBy: "name",
+    sortBy: "name_asc",
   });
   const { toast } = useToast();
 
@@ -67,10 +67,16 @@ export const useCustomers = () => {
       }
 
       switch (query.sortBy) {
-        case "date":
+        case "date_asc":
+          request = request.order("created_at", { ascending: true });
+          break;
+        case "date_desc":
           request = request.order("created_at", { ascending: false });
           break;
-        case "name":
+        case "name_desc":
+          request = request.order("name", { ascending: false });
+          break;
+        case "name_asc":
         default:
           request = request.order("name", { ascending: true });
           break;

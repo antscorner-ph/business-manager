@@ -237,15 +237,17 @@ export const SuppliersManager = ({
                   className="flex-1"
                 />
               </div>
-              <Select value={query.sortBy} onValueChange={(value: "name" | "date") =>
+              <Select value={query.sortBy} onValueChange={(value: typeof query.sortBy) =>
                 onQueryChange({ ...query, sortBy: value })
               }>
                 <SelectTrigger>
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name">Name A-Z</SelectItem>
-                  <SelectItem value="date">Newest First</SelectItem>
+                  <SelectItem value="name_asc">Name A-Z</SelectItem>
+                  <SelectItem value="name_desc">Name Z-A</SelectItem>
+                  <SelectItem value="date_asc">Oldest First</SelectItem>
+                  <SelectItem value="date_desc">Newest First</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" onClick={handleClearFilters} className="md:col-span-2">
@@ -406,7 +408,7 @@ export const SuppliersManager = ({
             <div className="text-sm text-muted-foreground">
               Showing {startIndex} to {endIndex} of {totalCount} suppliers
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -417,7 +419,7 @@ export const SuppliersManager = ({
               >
                 Previous
               </Button>
-              <div className="text-sm">
+              <div className="min-w-[110px] text-center text-sm">
                 Page {query.page} of {totalPages}
               </div>
               <Button

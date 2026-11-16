@@ -129,11 +129,15 @@ export type ProfitLossResult = {
   monthKeys: string[];
   salesRevenue: Record<string, number>;
   otherIncome: Record<string, number>;
+  costOfGoodsSold: Record<string, number>;
+  grossProfit: Record<string, number>;
   totalRevenue: Record<string, number>;
   expenseByLabel: Record<string, Record<string, number>>;
   totalExpenses: Record<string, number>;
   netIncome: Record<string, number>;
 };
+
+export const COGS_LABEL = "Cost of Goods Sold";
 
 export const EXPENSE_LABEL_MAP: Record<string, string> = {
   Salaries: "Salaries and Wages Expense",
@@ -155,6 +159,11 @@ const plMonthKey = (dateValue: string) => format(new Date(dateValue), "yyyy-MM")
  * Pure cash-basis Profit & Loss aggregation.
  * Only `cash_in` transactions count as revenue; only `paid` expenses count.
  */
+export const isCostOfGoodsSoldCategory = (category: string | null | undefined) => {
+  const normalized = (category || "").trim().toLowerCase();
+  return ["cost of goods sold", "cost of goods", "cogs"].includes(normalized);
+};
+
 export const computeProfitAndLoss = (
   monthKeys: string[],
   transactions: PLTransaction[],
@@ -162,23 +171,34 @@ export const computeProfitAndLoss = (
 ): ProfitLossResult => {
   const salesRevenue = zeroValues(monthKeys);
   const otherIncome = zeroValues(monthKeys);
+  const costOfGoodsSold = zeroValues(monthKeys);
+  const grossProfit = zeroValues(monthKeys);
   const totalRevenue = zeroValues(monthKeys);
   const totalExpenses = zeroValues(monthKeys);
   const netIncome = zeroValues(monthKeys);
   const expenseByLabel: Record<string, Record<string, number>> = {};
 
   for (const tx of transactions) {
-    if (tx.type !== "cash_in") continue;
     const txDate = tx.transaction_date ?? tx.created_at ?? "";
     if (!txDate) continue;
     const monthKey = plMonthKey(txDate);
     if (!monthKeys.includes(monthKey)) continue;
 
     const amount = Number(tx.amount || 0);
-    if (tx.category === "Sales") {
-      salesRevenue[monthKey] += amount;
-    } else {
-      otherIncome[monthKey] += amount;
+    if (tx.type === "cash_in") {
+      if (tx.category === "Sales") {
+        salesRevenue[monthKey] += amount;
+      } else {
+        otherIncome[monthKey] += amount;
+      }
+      continue;
+    }
+
+    if (tx.type === "cash_out" && isCostOfGoodsSoldCategory(tx.category)) {
+      costOfGoodsSold[monthKey] += amount;
+      const label = COGS_LABEL;
+      if (!expenseByLabel[label]) expenseByLabel[label] = zeroValues(monthKeys);
+      expenseByLabel[label][monthKey] += amount;
     }
   }
 
@@ -198,6 +218,7 @@ export const computeProfitAndLoss = (
       (sum, row) => sum + Number(row[monthKey] || 0),
       0
     );
+    grossProfit[monthKey] = salesRevenue[monthKey] - costOfGoodsSold[monthKey];
     netIncome[monthKey] = totalRevenue[monthKey] - totalExpenses[monthKey];
   }
 
@@ -205,6 +226,8 @@ export const computeProfitAndLoss = (
     monthKeys,
     salesRevenue,
     otherIncome,
+    costOfGoodsSold,
+    grossProfit,
     totalRevenue,
     expenseByLabel,
     totalExpenses,

@@ -114,15 +114,18 @@ export function ProfitLossOverview({ report }: ProfitLossOverviewProps) {
   const compareLabel = compareMode === "same_month_last_year" ? "vs same month last year" : "vs previous month";
 
   const latestRevenue = report.totalRevenue.values[latestMonthKey] || 0;
+  const latestGrossProfit = report.grossProfit.values[latestMonthKey] || 0;
   const latestExpenses = report.totalExpenses.values[latestMonthKey] || 0;
   const latestNet = report.netIncome.values[latestMonthKey] || 0;
   const latestMargin = latestRevenue === 0 ? 0 : (latestNet / latestRevenue) * 100;
 
   const previousRevenue = compareMonthKey ? report.totalRevenue.values[compareMonthKey] || 0 : 0;
+  const previousGrossProfit = compareMonthKey ? report.grossProfit.values[compareMonthKey] || 0 : 0;
   const previousExpenses = compareMonthKey ? report.totalExpenses.values[compareMonthKey] || 0 : 0;
   const previousNet = compareMonthKey ? report.netIncome.values[compareMonthKey] || 0 : 0;
 
   const revenueDelta = compareMonthKey ? percentDelta(latestRevenue, previousRevenue) : null;
+  const grossProfitDelta = compareMonthKey ? percentDelta(latestGrossProfit, previousGrossProfit) : null;
   const expensesDelta = compareMonthKey ? percentDelta(latestExpenses, previousExpenses) : null;
   const netDelta = compareMonthKey ? percentDelta(latestNet, previousNet) : null;
 
@@ -252,13 +255,20 @@ export function ProfitLossOverview({ report }: ProfitLossOverviewProps) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <SummaryCard
           title="Revenue"
           value={compactCurrency(latestRevenue)}
           icon={PhilippinePeso}
           variant="default"
           subtitle={formatDeltaWithContext(revenueDelta)}
+        />
+        <SummaryCard
+          title="Gross Profit"
+          value={compactCurrency(latestGrossProfit)}
+          icon={TrendingUp}
+          variant="success"
+          subtitle={formatDeltaWithContext(grossProfitDelta)}
         />
         <SummaryCard
           title="Expenses"

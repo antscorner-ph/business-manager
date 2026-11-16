@@ -40,7 +40,7 @@ export type ReceivablesQuery = {
   page: number;
   pageSize: number;
   search: string;
-  sortBy: "date" | "balance" | "duedate";
+  sortBy: "date_asc" | "date_desc" | "balance_asc" | "balance_desc" | "duedate_asc" | "duedate_desc";
   status: "all" | "pending" | "partially_paid" | "paid" | "written_off";
   startDate: string;
   endDate: string;
@@ -57,7 +57,7 @@ export function useReceivables() {
     page: 1,
     pageSize: 10,
     search: "",
-    sortBy: "date",
+    sortBy: "date_desc",
     status: "all",
     startDate: "",
     endDate: "",
@@ -99,13 +99,22 @@ export function useReceivables() {
       }
 
       switch (query.sortBy) {
-        case "balance":
+        case "balance_asc":
+          listRequest = listRequest.order("balance", { ascending: true });
+          break;
+        case "balance_desc":
           listRequest = listRequest.order("balance", { ascending: false });
           break;
-        case "duedate":
+        case "duedate_asc":
           listRequest = listRequest.order("due_date", { ascending: true });
           break;
-        case "date":
+        case "duedate_desc":
+          listRequest = listRequest.order("due_date", { ascending: false });
+          break;
+        case "date_asc":
+          listRequest = listRequest.order("date_issued", { ascending: true });
+          break;
+        case "date_desc":
         default:
           listRequest = listRequest.order("date_issued", { ascending: false });
           break;

@@ -40,7 +40,7 @@ export type PurchaseOrdersQuery = {
   page: number;
   pageSize: number;
   search: string;
-  sortBy: "date" | "amount" | "supplier";
+  sortBy: "date_asc" | "date_desc" | "amount_asc" | "amount_desc" | "supplier_asc" | "supplier_desc";
   paymentStatus: "all" | "unpaid" | "partial" | "paid";
   status: "all" | "pending" | "approved" | "cancelled";
   startDate: string;
@@ -59,7 +59,7 @@ export const usePurchaseOrders = () => {
     page: 1,
     pageSize: 10,
     search: "",
-    sortBy: "date",
+    sortBy: "date_desc",
     paymentStatus: "all",
     status: "all",
     startDate: "",
@@ -114,13 +114,22 @@ export const usePurchaseOrders = () => {
       }
 
       switch (query.sortBy) {
-        case "amount":
+        case "amount_asc":
+          listRequest = listRequest.order("total_amount", { ascending: true });
+          break;
+        case "amount_desc":
           listRequest = listRequest.order("total_amount", { ascending: false });
           break;
-        case "supplier":
+        case "supplier_asc":
           listRequest = listRequest.order("supplier_name", { ascending: true });
           break;
-        case "date":
+        case "supplier_desc":
+          listRequest = listRequest.order("supplier_name", { ascending: false });
+          break;
+        case "date_asc":
+          listRequest = listRequest.order("date", { ascending: true });
+          break;
+        case "date_desc":
         default:
           listRequest = listRequest.order("date", { ascending: false });
           break;

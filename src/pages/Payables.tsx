@@ -111,7 +111,7 @@ const Payables = () => {
       <Card>
         <CardHeader>
           <CardTitle>Open Payables Register</CardTitle>
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-5">
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -124,6 +124,20 @@ const Payables = () => {
                 <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
               )}
             </div>
+            <Select
+              value={query.sortBy}
+              onValueChange={(value: typeof query.sortBy) => setQuery({ ...query, sortBy: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date_asc">Date Oldest First</SelectItem>
+                <SelectItem value="date_desc">Date Newest First</SelectItem>
+                <SelectItem value="amount_asc">Amount Low to High</SelectItem>
+                <SelectItem value="amount_desc">Amount High to Low</SelectItem>
+              </SelectContent>
+            </Select>
             <Select
               value={query.source}
               onValueChange={(value: "all" | "purchase_order" | "expense") =>

@@ -96,9 +96,12 @@ export function ProductsManager({
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="name">Sort by Name</SelectItem>
-                <SelectItem value="qty">Sort by Stock (low first)</SelectItem>
-                <SelectItem value="price">Sort by Price (high first)</SelectItem>
+                <SelectItem value="name_asc">Name A-Z</SelectItem>
+                <SelectItem value="name_desc">Name Z-A</SelectItem>
+                <SelectItem value="qty_asc">Stock Low to High</SelectItem>
+                <SelectItem value="qty_desc">Stock High to Low</SelectItem>
+                <SelectItem value="price_asc">Price Low to High</SelectItem>
+                <SelectItem value="price_desc">Price High to Low</SelectItem>
               </SelectContent>
             </Select>
           </div>

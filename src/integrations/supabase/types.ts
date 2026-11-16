@@ -442,6 +442,226 @@ export type Database = {
           },
         ]
       }
+      consignees: {
+        Row: {
+          id: string
+          name: string
+          contact_person: string | null
+          phone: string | null
+          address: string | null
+          notes: string | null
+          commission_rate: number
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          contact_person?: string | null
+          phone?: string | null
+          address?: string | null
+          notes?: string | null
+          commission_rate?: number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          contact_person?: string | null
+          phone?: string | null
+          address?: string | null
+          notes?: string | null
+          commission_rate?: number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      consignee_products: {
+        Row: {
+          id: string
+          consignee_id: string
+          product_sku: string
+          quantity: number
+          unit_price: number
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          consignee_id: string
+          product_sku: string
+          quantity?: number
+          unit_price?: number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          consignee_id?: string
+          product_sku?: string
+          quantity?: number
+          unit_price?: number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignee_products_consignee_id_fkey"
+            columns: ["consignee_id"]
+            isOneToOne: false
+            referencedRelation: "consignees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignee_products_product_sku_fkey"
+            columns: ["product_sku"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["sku"]
+          },
+        ]
+      }
+      consignment_transactions: {
+        Row: {
+          id: string
+          consignee_id: string
+          type: "REMITTANCE" | "RESTOCK"
+          transaction_date: string
+          gross_amount: number
+          commission_amount: number
+          amount_due: number
+          amount_paid: number
+          balance: number
+          payment_status: "unpaid" | "partial" | "paid"
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          consignee_id: string
+          type: "REMITTANCE" | "RESTOCK"
+          transaction_date?: string
+          gross_amount?: number
+          commission_amount?: number
+          amount_due?: number
+          amount_paid?: number
+          balance?: number
+          payment_status?: "unpaid" | "partial" | "paid"
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          consignee_id?: string
+          type?: "REMITTANCE" | "RESTOCK"
+          transaction_date?: string
+          gross_amount?: number
+          commission_amount?: number
+          amount_due?: number
+          amount_paid?: number
+          balance?: number
+          payment_status?: "unpaid" | "partial" | "paid"
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignment_transactions_consignee_id_fkey"
+            columns: ["consignee_id"]
+            isOneToOne: false
+            referencedRelation: "consignees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consignment_transaction_items: {
+        Row: {
+          id: string
+          transaction_id: string
+          product_sku: string
+          quantity: number
+          unit_price: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          transaction_id: string
+          product_sku: string
+          quantity: number
+          unit_price: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          transaction_id?: string
+          product_sku?: string
+          quantity?: number
+          unit_price?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignment_transaction_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "consignment_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_transaction_items_product_sku_fkey"
+            columns: ["product_sku"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["sku"]
+          },
+        ]
+      }
+      consignment_payments: {
+        Row: {
+          id: string
+          transaction_id: string
+          amount: number
+          payment_date: string
+          payment_method: string
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          transaction_id: string
+          amount: number
+          payment_date?: string
+          payment_method?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          transaction_id?: string
+          amount?: number
+          payment_date?: string
+          payment_method?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignment_payments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "consignment_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_orders: {
         Row: {
           id: string
@@ -664,7 +884,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      record_consignment_transaction: {
+        Args: {
+          p_header: Json
+          p_items: Json
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

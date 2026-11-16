@@ -225,9 +225,12 @@ export const PurchaseOrdersManager = ({
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="date">Sort by Date</SelectItem>
-                  <SelectItem value="amount">Sort by Amount</SelectItem>
-                  <SelectItem value="supplier">Sort by Supplier</SelectItem>
+                  <SelectItem value="date_asc">Date Oldest First</SelectItem>
+                  <SelectItem value="date_desc">Date Newest First</SelectItem>
+                  <SelectItem value="amount_asc">Amount Low to High</SelectItem>
+                  <SelectItem value="amount_desc">Amount High to Low</SelectItem>
+                  <SelectItem value="supplier_asc">Supplier A-Z</SelectItem>
+                  <SelectItem value="supplier_desc">Supplier Z-A</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={query.paymentStatus} onValueChange={(value: PurchaseOrdersQuery["paymentStatus"]) => {
@@ -262,7 +265,7 @@ export const PurchaseOrdersManager = ({
                   search: "",
                   paymentStatus: "all",
                   status: "all",
-                  sortBy: "date",
+                  sortBy: "date_desc",
                   page: 1,
                 });
               }}>

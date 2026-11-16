@@ -18,6 +18,7 @@ const Expenses = () => {
     setQuery,
     loading,
     addExpense,
+    updateExpense,
     updateExpenseStatus,
     deleteExpense,
   } = useExpenses();
@@ -169,6 +170,7 @@ const Expenses = () => {
         query={query}
         onQueryChange={setQuery}
         onAddExpense={addExpense}
+        onUpdateExpense={updateExpense}
         onUpdateStatus={updateExpenseStatus}
         onDeleteExpense={deleteExpense}
       />

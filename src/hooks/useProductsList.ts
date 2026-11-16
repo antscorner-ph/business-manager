@@ -7,7 +7,7 @@ export type ProductsListQuery = {
   page: number;
   pageSize: number;
   search: string;
-  sortBy: "name" | "qty" | "price";
+  sortBy: "name_asc" | "name_desc" | "qty_asc" | "qty_desc" | "price_asc" | "price_desc";
 };
 
 /**
@@ -22,7 +22,7 @@ export const useProductsList = () => {
     page: 1,
     pageSize: 20,
     search: "",
-    sortBy: "name",
+    sortBy: "name_asc",
   });
 
   const fetchProducts = useCallback(async () => {
@@ -41,13 +41,22 @@ export const useProductsList = () => {
       }
 
       switch (query.sortBy) {
-        case "qty":
+        case "qty_asc":
           request = request.order("qty", { ascending: true, nullsFirst: true });
           break;
-        case "price":
+        case "qty_desc":
+          request = request.order("qty", { ascending: false, nullsFirst: false });
+          break;
+        case "price_asc":
+          request = request.order("price", { ascending: true, nullsFirst: true });
+          break;
+        case "price_desc":
           request = request.order("price", { ascending: false, nullsFirst: false });
           break;
-        case "name":
+        case "name_desc":
+          request = request.order("name", { ascending: false, nullsFirst: false });
+          break;
+        case "name_asc":
         default:
           request = request.order("name", { ascending: true, nullsFirst: false });
           break;

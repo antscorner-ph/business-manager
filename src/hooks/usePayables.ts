@@ -28,7 +28,7 @@ export type PayablesQuery = {
   search: string;
   source: "all" | PayableSource;
   status: "all" | PayableStatus;
-  sortBy: "date" | "amount";
+  sortBy: "date_asc" | "date_desc" | "amount_asc" | "amount_desc";
   startDate: string;
   endDate: string;
 };
@@ -40,7 +40,7 @@ export function usePayables() {
     search: "",
     source: "all",
     status: "all",
-    sortBy: "date",
+    sortBy: "date_desc",
     startDate: "",
     endDate: "",
   });
@@ -148,8 +148,14 @@ export function usePayables() {
       }
 
       rows.sort((a, b) => {
-        if (query.sortBy === "amount") return b.amount - a.amount;
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
+        const isAscending = query.sortBy.endsWith("_asc");
+
+        if (query.sortBy.startsWith("amount")) {
+          return (a.amount - b.amount) * (isAscending ? 1 : -1);
+        }
+
+        const dateDelta = new Date(a.date).getTime() - new Date(b.date).getTime();
+        return dateDelta * (isAscending ? 1 : -1);
       });
 
       setPayables(rows);

@@ -349,9 +349,12 @@ export function ReceivablesManager({
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="date">Sort by Date</SelectItem>
-                  <SelectItem value="balance">Sort by Balance</SelectItem>
-                  <SelectItem value="duedate">Sort by Due Date</SelectItem>
+                  <SelectItem value="date_asc">Date Oldest First</SelectItem>
+                  <SelectItem value="date_desc">Date Newest First</SelectItem>
+                  <SelectItem value="balance_asc">Balance Low to High</SelectItem>
+                  <SelectItem value="balance_desc">Balance High to Low</SelectItem>
+                  <SelectItem value="duedate_asc">Due Date Soonest First</SelectItem>
+                  <SelectItem value="duedate_desc">Due Date Latest First</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={query.status} onValueChange={(value: ReceivablesQuery["status"]) => {
@@ -373,7 +376,7 @@ export function ReceivablesManager({
                   ...query,
                   search: "",
                   status: "all",
-                  sortBy: "date",
+                  sortBy: "date_desc",
                   page: 1,
                 });
               }}>

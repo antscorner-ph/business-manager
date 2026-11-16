@@ -233,15 +233,17 @@ export const CustomersManager = ({
                   <Loader2 className="absolute right-3 h-4 w-4 animate-spin text-muted-foreground" />
                 )}
               </div>
-              <Select value={query.sortBy} onValueChange={(value: "name" | "date") =>
+              <Select value={query.sortBy} onValueChange={(value: typeof query.sortBy) =>
                 onQueryChange({ ...query, sortBy: value })
               }>
                 <SelectTrigger>
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name">Name A-Z</SelectItem>
-                  <SelectItem value="date">Newest First</SelectItem>
+                  <SelectItem value="name_asc">Name A-Z</SelectItem>
+                  <SelectItem value="name_desc">Name Z-A</SelectItem>
+                  <SelectItem value="date_asc">Oldest First</SelectItem>
+                  <SelectItem value="date_desc">Newest First</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" onClick={handleClearFilters} className="md:col-span-2">

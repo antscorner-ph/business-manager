@@ -279,8 +279,10 @@ export function BankDepositsManager({
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="date">Sort by Date</SelectItem>
-                <SelectItem value="amount">Sort by Amount</SelectItem>
+                <SelectItem value="date_asc">Date Oldest First</SelectItem>
+                <SelectItem value="date_desc">Date Newest First</SelectItem>
+                <SelectItem value="amount_asc">Amount Low to High</SelectItem>
+                <SelectItem value="amount_desc">Amount High to Low</SelectItem>
               </SelectContent>
             </Select>
             <Select value={query.status} onValueChange={(value: BankDepositsQuery["status"]) => {
@@ -301,7 +303,7 @@ export function BankDepositsManager({
                 ...query,
                 search: "",
                 status: "all",
-                sortBy: "date",
+                sortBy: "date_desc",
                 page: 1,
               });
             }}>

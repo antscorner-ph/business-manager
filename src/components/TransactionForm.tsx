@@ -27,7 +27,14 @@ interface TransactionFormProps {
 }
 
 const cashInCategories = ["Sales", "Refund Received", "Loan", "Other Income"];
-const cashOutCategories = ["Supplies", "Refund Given", "Wages", "Utilities", "Other Expense"];
+const cashOutCategories = [
+  "Supplies",
+  "Refund Given",
+  "Wages",
+  "Utilities",
+  "Cost of Goods Sold",
+  "Other Expense",
+];
 
 export function TransactionForm({ onAddTransaction }: TransactionFormProps) {
   const [type, setType] = useState<"cash_in" | "cash_out">("cash_in");

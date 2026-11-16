@@ -29,7 +29,7 @@ export type BankDepositsQuery = {
   page: number;
   pageSize: number;
   search: string;
-  sortBy: "date" | "amount";
+  sortBy: "date_asc" | "date_desc" | "amount_asc" | "amount_desc";
   status: "all" | "pending" | "confirmed" | "reconciled";
 };
 
@@ -42,7 +42,7 @@ export function useBankDeposits() {
     page: 1,
     pageSize: 10,
     search: "",
-    sortBy: "date",
+    sortBy: "date_desc",
     status: "all",
   });
 
@@ -66,10 +66,16 @@ export function useBankDeposits() {
       }
 
       switch (query.sortBy) {
-        case "amount":
+        case "amount_asc":
+          request = request.order("total_amount", { ascending: true });
+          break;
+        case "amount_desc":
           request = request.order("total_amount", { ascending: false });
           break;
-        case "date":
+        case "date_asc":
+          request = request.order("deposit_date", { ascending: true });
+          break;
+        case "date_desc":
         default:
           request = request.order("deposit_date", { ascending: false });
           break;

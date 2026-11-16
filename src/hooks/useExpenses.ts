@@ -19,13 +19,15 @@ export type ExpensesQuery = {
   page: number;
   pageSize: number;
   search: string;
-  sortBy: "date" | "amount";
+  sortBy: "date_asc" | "date_desc" | "amount_asc" | "amount_desc";
   status: "all" | "paid" | "unpaid" | "partially_paid";
   paymentMethod: "all" | "cash" | "gcash" | "check" | "bank_transfer" | "other";
   category: string;
   startDate: string;
   endDate: string;
 };
+
+export type UpdateExpenseInput = Partial<Omit<Expense, "id" | "created_at" | "updated_at">>;
 
 export function useExpenses() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -38,7 +40,7 @@ export function useExpenses() {
     page: 1,
     pageSize: 10,
     search: "",
-    sortBy: "date",
+    sortBy: "date_desc",
     status: "all",
     paymentMethod: "all",
     category: "all",
@@ -93,10 +95,16 @@ export function useExpenses() {
       }
 
       switch (query.sortBy) {
-        case "amount":
+        case "amount_asc":
+          listRequest = listRequest.order("amount", { ascending: true });
+          break;
+        case "amount_desc":
           listRequest = listRequest.order("amount", { ascending: false });
           break;
-        case "date":
+        case "date_asc":
+          listRequest = listRequest.order("expense_date", { ascending: true });
+          break;
+        case "date_desc":
         default:
           listRequest = listRequest.order("expense_date", { ascending: false });
           break;
@@ -147,6 +155,24 @@ export function useExpenses() {
     }
   };
 
+  const updateExpense = async (id: string, updates: UpdateExpenseInput) => {
+    try {
+      const { error } = await supabase
+        .from("expenses")
+        .update(updates)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await loadExpenses();
+      toast.success("Expense updated");
+    } catch (error) {
+      console.error("Error updating expense:", error);
+      toast.error("Failed to update expense");
+      throw error;
+    }
+  };
+
   const updateExpenseStatus = async (id: string, status: "paid" | "unpaid" | "partially_paid") => {
     try {
       const { error } = await supabase
@@ -191,6 +217,7 @@ export function useExpenses() {
     setQuery,
     loading,
     addExpense,
+    updateExpense,
     updateExpenseStatus,
     deleteExpense,
     reload: loadExpenses,
